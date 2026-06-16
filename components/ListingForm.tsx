@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 
 import { MAX_IMAGES_PER_LISTING } from "@/lib/config";
 import { compressImage } from "@/lib/image";
@@ -30,8 +30,13 @@ export function ListingForm({
     FormData
   >(action, {});
   const [previews, setPreviews] = useState<string[]>([]);
+  const [badPreviews, setBadPreviews] = useState<Set<string>>(new Set());
   const [processing, setProcessing] = useState(false);
   const [localError, setLocalError] = useState<string>();
+  // Pre-check "Free" when editing an item already priced at 0.
+  const [isFree, setIsFree] = useState(
+    defaults?.price != null && Number(defaults.price) === 0,
+  );
 
   const busy = processing || isPending;
 
@@ -40,6 +45,7 @@ export function ListingForm({
       0,
       MAX_IMAGES_PER_LISTING,
     );
+    setBadPreviews(new Set());
     setPreviews(files.map((f) => URL.createObjectURL(f)));
   }
 
@@ -70,7 +76,8 @@ export function ListingForm({
       setProcessing(false);
     }
 
-    formAction(formData);
+    // Dispatch must run inside a transition so isPending tracks correctly.
+    startTransition(() => formAction(formData));
   }
 
   return (
@@ -101,11 +108,22 @@ export function ListingForm({
           name="price"
           type="text"
           inputMode="decimal"
-          required
-          placeholder="0.00"
+          required={!isFree}
+          disabled={isFree}
+          placeholder={isFree ? "Free" : "0.00"}
           defaultValue={defaults?.price}
-          className={inputClass}
+          className={`${inputClass} disabled:bg-slate-100 disabled:text-slate-400`}
         />
+        <label className="mt-2 flex items-center gap-2 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            name="free"
+            checked={isFree}
+            onChange={(e) => setIsFree(e.target.checked)}
+            className="h-4 w-4 rounded border-slate-300"
+          />
+          This item is free
+        </label>
       </div>
 
       <div>
@@ -141,15 +159,29 @@ export function ListingForm({
         />
         {previews.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
-            {previews.map((src) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={src}
-                src={src}
-                alt="preview"
-                className="h-20 w-20 rounded-lg border border-slate-200 object-cover"
-              />
-            ))}
+            {previews.map((src) =>
+              badPreviews.has(src) ? (
+                // HEIC and other non-web formats can't preview locally; they're
+                // converted to JPEG on upload.
+                <div
+                  key={src}
+                  className="flex h-20 w-20 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 px-1 text-center text-[10px] leading-tight text-slate-500"
+                >
+                  Photo ready ✓
+                </div>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={src}
+                  src={src}
+                  alt="preview"
+                  onError={() =>
+                    setBadPreviews((prev) => new Set(prev).add(src))
+                  }
+                  className="h-20 w-20 rounded-lg border border-slate-200 object-cover"
+                />
+              ),
+            )}
           </div>
         )}
       </div>

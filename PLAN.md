@@ -18,13 +18,13 @@ Auth, Storage) · Resend (email) · Vercel (hosting). All free tier.
 - [x] [`lib/config.ts`](lib/config.ts) (APP_NAME, constants) + [`lib/types.ts`](lib/types.ts)
 - [x] Node version pinned ([.nvmrc](.nvmrc), `engines` in package.json)
 
-## Phase 2 — Database ✅ (code) / [!] (apply to your project)
+## Phase 2 — Database ✅
 - [x] Migration written: [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) — tables, RLS, storage bucket, triggers
 - [x] Admin seed script: [`supabase/seed_admin.sql`](supabase/seed_admin.sql)
-- [!] Pause a dormant Supabase project, create the new marketplace project
-- [!] Run `0001_init.sql` in the new project's SQL editor
-- [!] Turn off public signups (Auth → Providers → Email)
-- [!] Seed your admin user, then run `seed_admin.sql`
+- [x] New marketplace Supabase project created (Data API + auto-expose + automatic RLS enabled)
+- [x] Ran `0001_init.sql` in the new project's SQL editor
+- [x] Seeded admin user (created auth user, ran `seed_admin.sql`)
+- [ ] Turn off public signups (Auth → Providers → Email) — recommended, do before inviting
 
 ## Phase 3 — Auth ✅
 - [x] Session refresh + route protection: [`proxy.ts`](proxy.ts) + [`lib/supabase/middleware.ts`](lib/supabase/middleware.ts)
@@ -41,6 +41,8 @@ Auth, Storage) · Resend (email) · Vercel (hosting). All free tier.
 - [x] [Detail page + photo gallery](app/(app)/listings/[id]/page.tsx)
 - [x] [Edit / delete / mark Sold](app/(app)/listings/[id]/edit/page.tsx), remove individual photos
 - [x] [Home grid](app/(app)/page.tsx) with Sold badges + empty state
+- [x] Photos **optional**; free items supported (price shows "Free")
+- [x] Browser-side image pipeline: HEIC→JPEG + resize/compress ([lib/image.ts](lib/image.ts))
 
 ## Phase 6 — Profile + contact ✅
 - [x] [Profile editor](app/(app)/profile/page.tsx) (display name + contact email/phone)
@@ -52,9 +54,17 @@ Auth, Storage) · Resend (email) · Vercel (hosting). All free tier.
 - [x] Shared UI primitives ([components/ui.tsx](components/ui.tsx), cards, forms)
 
 ## Phase 8 — Deploy [!]
-- [ ] Copy `.env.local.example` → `.env.local`, fill in keys
+- [x] Copy `.env.local.example` → `.env.local`, fill in keys (running locally)
 - [!] Push to GitHub, import in Vercel, add env vars (incl. production `APP_URL`)
 - [!] Deploy
+
+## Phase 9 — Post-MVP refinements ✅
+- [x] Client-side image compression (resize ~1600px, JPEG) — [lib/image.ts](lib/image.ts)
+- [x] HEIC/HEIF (iPhone) → JPEG conversion via `heic2any` (lazy-loaded)
+- [x] Raised Server Action body limit to 4 MB — [next.config.ts](next.config.ts)
+- [x] Resilient image preview (placeholder for non-web formats) — [components/ListingForm.tsx](components/ListingForm.tsx)
+- [x] Photos optional when posting
+- [x] "This item is free" checkbox → `price_cents = 0`, displays as "Free"
 
 ---
 
@@ -64,9 +74,14 @@ Auth, Storage) · Resend (email) · Vercel (hosting). All free tier.
 - [x] `npx tsc --noEmit` — passes
 - [x] `npm run lint` — passes
 - [x] `npm run build` — passes
-- [x] `npm test` — 6/6 passing ([lib/format.test.ts](lib/format.test.ts))
+- [x] `npm test` — 7/7 passing ([lib/format.test.ts](lib/format.test.ts))
 
-### End-to-end (blocked — needs your Supabase + Resend) [!]
+### Local (in progress) 🚧
+- [x] Admin logs in locally against the live Supabase project
+- [x] Posts a listing (photo upload working after HEIC + compression fixes)
+- [ ] Verify free + no-photo listings render correctly
+
+### End-to-end (needs Resend for invites) [!]
 - [ ] Admin invites a test member → Resend email arrives with temp password
 - [ ] Member logs in → forced to change-password → sets new password
 - [ ] Member sets contact info; posts a listing with 2–3 photos
@@ -89,6 +104,15 @@ Auth, Storage) · Resend (email) · Vercel (hosting). All free tier.
   added later with no rework.
 - **2026-06-15 — Env vars:** set manually in Vercel settings. Declined the free
   Vercel ↔ Supabase env-sync integration for now to keep deploy simple.
+- **2026-06-16 — Image handling:** photos upload *through* Server Actions (RLS stays
+  in force) but are compressed in the browser first (resize ~1600px → JPEG) and
+  HEIC/HEIF converted to JPEG via lazy-loaded `heic2any`. Server Action body limit
+  raised to 4 MB (stays under Vercel's ~4.5 MB cap). If multi-photo uploads ever
+  exceed limits in production, switch to direct browser→Storage uploads.
+- **2026-06-16 — Free items:** modeled as `price_cents = 0` (no separate column);
+  a "free" checkbox is UI sugar, and `formatPrice(0)` renders "Free".
+- **2026-06-16 — Optional photos:** listings can be posted without any image; the
+  grid and detail views already show a "No photo" placeholder.
 
 ## Out of scope (v1)
 Categories/tags, "reveal contact" gating, in-app messaging, private image bucket

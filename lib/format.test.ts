@@ -29,7 +29,10 @@ describe("parsePriceToCents", () => {
 describe("formatPrice", () => {
   it("formats cents as USD", () => {
     expect(formatPrice(1500)).toBe("$15.00");
-    expect(formatPrice(0)).toBe("$0.00");
     expect(formatPrice(120000)).toBe("$1,200.00");
+  });
+
+  it("shows zero as Free", () => {
+    expect(formatPrice(0)).toBe("Free");
   });
 });

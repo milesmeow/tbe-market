@@ -16,7 +16,8 @@ export default function NewListingPage() {
         <ListingForm
           action={createListing}
           submitLabel="Post item"
-          photosRequired
+          photosRequired={false}
+          photosLabel="Photos (optional)"
         />
       </div>
     </div>

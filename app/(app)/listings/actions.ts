@@ -67,12 +67,14 @@ export async function createListing(
 ): Promise<ListingFormState> {
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
-  const priceCents = parsePriceToCents(String(formData.get("price") ?? ""));
+  const isFree = formData.get("free") != null;
+  const priceCents = isFree
+    ? 0
+    : parsePriceToCents(String(formData.get("price") ?? ""));
   const files = imageFiles(formData);
 
   if (!title) return { error: "Please enter a title." };
   if (priceCents === null) return { error: "Please enter a valid price." };
-  if (files.length === 0) return { error: "Please add at least one photo." };
 
   const supabase = await createClient();
   const {
@@ -142,7 +144,10 @@ export async function updateListing(
   const id = String(formData.get("id") ?? "");
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
-  const priceCents = parsePriceToCents(String(formData.get("price") ?? ""));
+  const isFree = formData.get("free") != null;
+  const priceCents = isFree
+    ? 0
+    : parsePriceToCents(String(formData.get("price") ?? ""));
   const files = imageFiles(formData);
 
   if (!id) redirect("/");

@@ -2,8 +2,9 @@
 
 An invite-only marketplace for a community. An admin invites members by email;
 each member gets a temporary password, must change it on first login, and can
-then post items for sale (photos, title, description, price). Other members see
-the seller's contact info and arrange the sale off-platform.
+then post items for sale (title, description, price or **free**, with optional
+photos). Other members see the seller's contact info and arrange the sale
+off-platform.
 
 Built with **Next.js (App Router)**, **Supabase** (Postgres + Auth + Storage),
 **Resend** (email), and **Tailwind CSS**. Designed to run entirely on free tiers.
@@ -18,9 +19,12 @@ Built with **Next.js (App Router)**, **Supabase** (Postgres + Auth + Storage),
 - **Invites** — only admins can invite. The invite creates the auth user with a
   temporary password (service-role key, server-side only) and emails it via
   Resend. `must_change_password` forces a reset on first login.
-- **Listings** — owners can create/edit/delete their own listings, add up to 5
-  photos, and mark items Sold. Row Level Security enforces ownership at the
-  database, not just the UI.
+- **Listings** — owners can create/edit/delete their own listings, mark items
+  Sold, set a price or flag them **free**, and attach up to 5 photos (optional).
+  Row Level Security enforces ownership at the database, not just the UI.
+- **Photos** — resized and compressed in the browser before upload, and iPhone
+  **HEIC/HEIF converted to JPEG** automatically (see `lib/image.ts`). Keeps
+  uploads small and web-displayable.
 
 ## One-time setup
 
@@ -107,8 +111,11 @@ components/               Shared UI (cards, forms, gallery, buttons)
 lib/
   supabase/              Browser / server / admin clients + proxy session logic
   listings.ts            Listing queries + image URL helpers
+  image.ts               Browser-side photo compression + HEIC→JPEG conversion
+  format.ts              Price formatting/parsing (0 → "Free")
   config.ts              APP_NAME and other constants
   types.ts               Database types
+types/                    Ambient type declarations (e.g. heic2any)
 supabase/
   migrations/0001_init.sql   Schema, RLS, storage, triggers
   seed_admin.sql             Grant the first admin
@@ -120,5 +127,11 @@ proxy.ts                  Session refresh + route protection (Next 16 "proxy")
 - Listing images live in a **public** storage bucket (images aren't sensitive),
   so they load via plain public URLs. Listing *data* and contact info are
   members-only via RLS.
+- **Photos** upload through Server Actions but are compressed client-side first;
+  `next.config.ts` raises the Server Action body limit to 4 MB (under Vercel's
+  ~4.5 MB serverless cap). HEIC/HEIF are converted to JPEG via `heic2any`, which
+  is lazy-loaded only when an Apple photo is selected.
+- **Free items** are simply `price_cents = 0` — no separate column. The "free"
+  checkbox is UI sugar and the price renders as "Free".
 - To rename the app, change `APP_NAME` in `lib/config.ts` or set
   `NEXT_PUBLIC_APP_NAME`.

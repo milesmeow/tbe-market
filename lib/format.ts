@@ -1,5 +1,6 @@
-/** Format an integer number of cents as USD, e.g. 1500 -> "$15.00". */
+/** Format cents as USD, e.g. 1500 -> "$15.00". Zero is shown as "Free". */
 export function formatPrice(cents: number): string {
+  if (cents === 0) return "Free";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
