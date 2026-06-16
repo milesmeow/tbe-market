@@ -80,6 +80,16 @@ Auth, Storage) · Resend (email) · Vercel (hosting). All free tier.
 ## Housekeeping
 - [ ] Commit the initial app (currently uncommitted on `develop`)
 
+## Decisions log
+- **2026-06-15 — DB migrations:** apply [`0001_init.sql`](supabase/migrations/0001_init.sql)
+  **manually, once**, in the Supabase SQL editor. Rejected the native Supabase
+  GitHub integration (Branching): it needs the Pro plan (~$25/mo) + per-preview
+  compute, which breaks the free-tier goal and is overkill for a one-time schema.
+  Migration files stay CLI-compatible, so `supabase db push` automation can be
+  added later with no rework.
+- **2026-06-15 — Env vars:** set manually in Vercel settings. Declined the free
+  Vercel ↔ Supabase env-sync integration for now to keep deploy simple.
+
 ## Out of scope (v1)
 Categories/tags, "reveal contact" gating, in-app messaging, private image bucket
 with signed URLs, Resend domain verification for production sending.

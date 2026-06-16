@@ -3,12 +3,8 @@
 import { useActionState, useState } from "react";
 
 import { MAX_IMAGES_PER_LISTING } from "@/lib/config";
-import {
-  FormError,
-  SubmitButton,
-  inputClass,
-  labelClass,
-} from "@/components/ui";
+import { compressImage } from "@/lib/image";
+import { FormError, inputClass, labelClass } from "@/components/ui";
 import type { ListingFormState } from "@/app/(app)/listings/actions";
 
 type Action = (
@@ -29,11 +25,15 @@ export function ListingForm({
   photosRequired: boolean;
   photosLabel?: string;
 }) {
-  const [state, formAction] = useActionState<ListingFormState, FormData>(
-    action,
-    {},
-  );
+  const [state, formAction, isPending] = useActionState<
+    ListingFormState,
+    FormData
+  >(action, {});
   const [previews, setPreviews] = useState<string[]>([]);
+  const [processing, setProcessing] = useState(false);
+  const [localError, setLocalError] = useState<string>();
+
+  const busy = processing || isPending;
 
   function onPickImages(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []).slice(
@@ -43,8 +43,38 @@ export function ListingForm({
     setPreviews(files.map((f) => URL.createObjectURL(f)));
   }
 
+  // Intercept submit so we can compress images in the browser before they're
+  // sent through the Server Action (keeps the request small).
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLocalError(undefined);
+
+    const formData = new FormData(e.currentTarget);
+    const rawFiles = formData
+      .getAll("images")
+      .filter((v): v is File => v instanceof File && v.size > 0)
+      .slice(0, MAX_IMAGES_PER_LISTING);
+
+    if (photosRequired && rawFiles.length === 0) {
+      setLocalError("Please add at least one photo.");
+      return;
+    }
+
+    setProcessing(true);
+    try {
+      formData.delete("images");
+      for (const file of rawFiles) {
+        formData.append("images", await compressImage(file));
+      }
+    } finally {
+      setProcessing(false);
+    }
+
+    formAction(formData);
+  }
+
   return (
-    <form action={formAction} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-4">
       {defaults?.id && <input type="hidden" name="id" value={defaults.id} />}
 
       <div>
@@ -124,9 +154,15 @@ export function ListingForm({
         )}
       </div>
 
-      <FormError message={state.error} />
+      <FormError message={localError ?? state.error} />
 
-      <SubmitButton pendingText="Saving…">{submitLabel}</SubmitButton>
+      <button
+        type="submit"
+        disabled={busy}
+        className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 font-medium text-white shadow-sm transition hover:bg-slate-700 disabled:opacity-50"
+      >
+        {processing ? "Processing photos…" : isPending ? "Saving…" : submitLabel}
+      </button>
     </form>
   );
 }
