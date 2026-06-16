@@ -12,6 +12,27 @@ Auth, Storage) · Resend (email) · Vercel (hosting). All free tier.
 
 ---
 
+## Pick up here (handoff)
+
+**State as of 2026-06-16:** App is feature-complete for the MVP and **committed** on
+branch `feature/initial-scaffolding` (working tree clean). It runs locally against a
+live Supabase project; the admin can log in and post listings. All automated checks
+pass (`tsc`, `lint`, `build`, `7/7` tests).
+
+**Blocked on James (not on code):**
+1. Turn **off** public signups in Supabase (Auth → Providers → Email) — do before inviting.
+2. Create a **Resend** account + API key, set `RESEND_API_KEY` / `EMAIL_FROM` in
+   `.env.local`. Until then the invite email can't send, so the end-to-end invite flow
+   is untested.
+3. Deploy to **Vercel** (push branch → import → add env vars incl. production `APP_URL`).
+
+**Suggested next action for a fresh session:** confirm free + no-photo listings render
+(last local check in flight), then once the Resend key exists, walk the End-to-end
+checklist below. Read [README.md](README.md) for setup and [AGENTS.md](AGENTS.md) before
+touching Next.js code (this repo pins Next 16 with breaking changes vs. older docs).
+
+---
+
 ## Phase 1 — Scaffold ✅
 - [x] Next.js + TypeScript + Tailwind project
 - [x] Supabase clients: [browser](lib/supabase/client.ts), [server](lib/supabase/server.ts), [admin](lib/supabase/admin.ts)
@@ -93,7 +114,8 @@ Auth, Storage) · Resend (email) · Vercel (hosting). All free tier.
 ---
 
 ## Housekeeping
-- [ ] Commit the initial app (currently uncommitted on `develop`)
+- [x] Commit the app (committed on branch `feature/initial-scaffolding`)
+- [ ] Open a PR / merge `feature/initial-scaffolding` once deployed and smoke-tested
 
 ## Decisions log
 - **2026-06-15 — DB migrations:** apply [`0001_init.sql`](supabase/migrations/0001_init.sql)
