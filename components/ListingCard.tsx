@@ -35,7 +35,9 @@ export function ListingCard({ listing }: { listing: ListingWithDetails }) {
       </div>
       <div className="p-3">
         <p className="truncate font-medium text-slate-900">{listing.title}</p>
-        <p className="text-sm text-slate-500">{formatPrice(listing.price_cents)}</p>
+        <p className="text-sm font-semibold text-gold-700">
+          {formatPrice(listing.price_cents)}
+        </p>
       </div>
     </Link>
   );

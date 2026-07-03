@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -35,13 +36,23 @@ export default async function AppLayout({
     <div className="min-h-screen">
       <header className="border-b border-slate-200 bg-white">
         <nav className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
-          <Link href="/" className="text-lg font-semibold text-slate-900">
-            {APP_NAME}
+          <Link href="/" className="flex items-center gap-2.5">
+            <Image
+              src="/tbe-logo.png"
+              alt="Temple Beth El"
+              width={36}
+              height={36}
+              className="h-9 w-9"
+              priority
+            />
+            <span className="font-serif text-xl font-semibold tracking-tight text-slate-900">
+              {APP_NAME}
+            </span>
           </Link>
           <div className="flex items-center gap-2 text-sm">
             <Link
               href="/listings/new"
-              className="rounded-lg bg-slate-900 px-3 py-1.5 font-medium text-white hover:bg-slate-700"
+              className="rounded-lg bg-gold-500 px-3 py-1.5 font-medium text-slate-900 shadow-sm transition hover:bg-gold-400"
             >
               + Post item
             </Link>

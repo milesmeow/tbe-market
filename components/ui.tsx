@@ -4,7 +4,7 @@ import { useFormStatus } from "react-dom";
 
 /** Shared Tailwind class strings so inputs/buttons look the same everywhere. */
 export const inputClass =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200";
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none focus:border-gold-500 focus:ring-2 focus:ring-gold-200";
 
 export const labelClass = "block text-sm font-medium text-slate-700 mb-1";
 
