@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useActionState } from "react";
 
 import { APP_NAME } from "@/lib/config";
@@ -18,10 +19,19 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-        <h1 className="text-center text-2xl font-semibold text-slate-900">
+        <Image
+          src="/tbe-logo.png"
+          alt="Temple Beth El"
+          width={72}
+          height={72}
+          className="mx-auto block h-[72px] w-[72px]"
+          priority
+        />
+        <h1 className="mt-4 text-center text-2xl font-semibold text-slate-900">
           {APP_NAME}
         </h1>
-        <p className="mt-1 text-center text-sm text-slate-500">
+        <div className="mx-auto mt-3 h-0.5 w-12 rounded-full bg-gold-500" />
+        <p className="mt-3 text-center text-sm text-slate-500">
           Sign in to your account
         </p>
 

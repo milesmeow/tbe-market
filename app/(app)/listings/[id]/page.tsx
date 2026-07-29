@@ -49,7 +49,7 @@ export default async function ListingDetailPage({
               </span>
             )}
           </div>
-          <p className="mt-1 text-xl font-medium text-slate-700">
+          <p className="mt-1 text-xl font-semibold text-gold-700">
             {formatPrice(listing.price_cents)}
           </p>
 
