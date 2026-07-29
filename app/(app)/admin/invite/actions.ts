@@ -9,9 +9,22 @@ import { APP_NAME, APP_URL } from "@/lib/config";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
+/** Sign-in details to hand to a new member when email can't deliver them. */
+export interface InviteCredentials {
+  loginUrl: string;
+  email: string;
+  tempPassword: string;
+}
+
 export interface InviteFormState {
   error?: string;
   success?: string;
+  /**
+   * Present whenever the invite email did not deliver the password — either
+   * because email is switched off (the expected setup during testing) or
+   * because the send failed. The admin shares these manually.
+   */
+  credentials?: InviteCredentials;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -40,13 +53,27 @@ async function callerIsAdmin(): Promise<boolean> {
   return Boolean(profile?.is_admin);
 }
 
-async function sendInviteEmail(email: string, tempPassword: string) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM;
-  if (!apiKey || !from) {
-    throw new Error("Email is not configured (RESEND_API_KEY / EMAIL_FROM).");
-  }
+/**
+ * Resend credentials, or null when email is switched off.
+ *
+ * Running without email is a supported mode, not a misconfiguration: invites
+ * then surface the temp password in the admin UI for the admin to pass along.
+ * The placeholder from `.env.local.example` counts as "off" so a half-filled
+ * local env behaves the same way production does.
+ */
+function emailConfig(): { apiKey: string; from: string } | null {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const from = process.env.EMAIL_FROM?.trim();
+  if (!apiKey || !from || apiKey === "re_your_api_key") return null;
+  return { apiKey, from };
+}
 
+async function sendInviteEmail(
+  config: { apiKey: string; from: string },
+  email: string,
+  tempPassword: string,
+) {
+  const { apiKey, from } = config;
   const resend = new Resend(apiKey);
   const loginUrl = `${APP_URL}/login`;
 
@@ -123,16 +150,32 @@ export async function inviteMember(
     return { error: "Could not set up the member profile. Please try again." };
   }
 
-  try {
-    await sendInviteEmail(email, tempPassword);
-  } catch {
+  // The member exists from here on, whatever happens with email — refresh the
+  // list now so every path below shows the new row.
+  revalidatePath("/admin/invite");
+
+  const credentials: InviteCredentials = {
+    loginUrl: `${APP_URL}/login`,
+    email,
+    tempPassword,
+  };
+
+  const config = emailConfig();
+  if (!config) {
     return {
-      error:
-        `Account created, but the email failed to send. ` +
-        `Share these manually — Email: ${email}, Temp password: ${tempPassword}`,
+      success: `Account created for ${email}.`,
+      credentials,
     };
   }
 
-  revalidatePath("/admin/invite");
+  try {
+    await sendInviteEmail(config, email, tempPassword);
+  } catch {
+    return {
+      error: "Account created, but the invite email failed to send.",
+      credentials,
+    };
+  }
+
   return { success: `Invitation sent to ${email}.` };
 }
