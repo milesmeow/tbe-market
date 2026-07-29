@@ -41,16 +41,27 @@ than duplicating setup steps here.
 
 ## Architecture & security invariants
 
-- **Three-gate access**, enforced in `proxy.ts` **and re-checked in pages**: (1) logged
-  in, (2) has a `profiles` row (= is a member), (3) completed first-login password change.
+- **Four-gate access**, enforced in `proxy.ts` **and re-checked in pages**: (1) logged
+  in, (2) has a `profiles` row (= is a member), (3) not deactivated
+  (`profiles.deactivated_at is null`), (4) completed first-login password change.
 - **Ownership is enforced by Supabase Row Level Security, not just the UI** — never rely
   on UI checks alone. `is_member()` (SECURITY DEFINER) gates reads; owners write only
   their own rows. Trigger `prevent_admin_escalation` blocks self-granting `is_admin`.
+- **`is_member()` is the choke point for membership.** It resolves to
+  `is_active_member(auth.uid())`, so deactivation revokes read *and* write access across
+  every policy at once. Widen membership rules there, not policy by policy.
 - Split Supabase clients: `lib/supabase/client.ts` (browser), `server.ts` (server),
-  `admin.ts` (**service-role, server-only** — used for invites; never expose to the client).
-- Schema source of truth: `supabase/migrations/0001_init.sql`; TS mirror `lib/types.ts`.
-  Tables: `profiles`, `listings`, `listing_images`. Storage bucket `listing-images` is
-  **public read**, member-only insert, owner-only delete.
+  `admin.ts` (**service-role, server-only** — invites, member removal/deactivation; never
+  expose to the client). Actions using it **bypass RLS**, so their own `callerAdminId()`
+  check is the entire authorization boundary — hiding a button is not a control.
+- Schema source of truth: `supabase/migrations/` — `0001_init.sql` then
+  `0002_member_deactivation.sql`, applied **manually and in order** in the Supabase SQL
+  editor; TS mirror `lib/types.ts`. Tables: `profiles`, `listings`, `listing_images`.
+  Storage bucket `listing-images` is **public read**, member-only insert, owner-only delete.
+- **Migrate before deploying code that reads a new column.** PostgREST 400s on an unknown
+  column; the proxy treats a *failed* profile query as "cannot verify" (deny, keep the
+  session) rather than "not a member" (sign out) specifically so version skew doesn't
+  lock everyone out.
 
 ## Domain rules & gotchas
 

@@ -41,6 +41,8 @@ breaking changes vs. older docs).
 
 ## Phase 2 — Database ✅
 - [x] Migration written: [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) — tables, RLS, storage bucket, triggers
+- [x] Migration written: [`0002_member_deactivation.sql`](supabase/migrations/0002_member_deactivation.sql) — `deactivated_at`, `is_active_member()`, policy updates
+- [ ] **Run `0002_member_deactivation.sql`** in the SQL editor — required before this code runs
 - [x] Admin seed script: [`supabase/seed_admin.sql`](supabase/seed_admin.sql)
 - [x] New marketplace Supabase project created (Data API + auto-expose + automatic RLS enabled)
 - [x] Ran `0001_init.sql` in the new project's SQL editor
@@ -56,6 +58,8 @@ breaking changes vs. older docs).
 - [x] [Invite flow + member list](app/(app)/admin/invite/page.tsx) ([actions](app/(app)/admin/invite/actions.ts))
 - [x] Resend transactional invite email (code in place; disabled by unset env vars)
 - [x] Email-optional fallback: credentials shown in the admin UI for manual sharing
+- [x] Remove a member (hard delete: account, listings, photos) — admins exempt
+- [x] Deactivate / reactivate a member (reversible: keeps data, revokes access) — admins exempt
 - [ ] Resend account + verified domain — deferred until after the testing phase
 
 ## Phase 5 — Listings ✅
@@ -150,6 +154,16 @@ breaking changes vs. older docs).
 - **2026-07-28 — Production branch:** `main` (fast-forwarded from `develop`), so
   Vercel's default Production branch works unchanged and `develop` keeps getting
   preview deploys.
+- **2026-07-29 — Member removal, two flavours:** **Remove** hard-deletes (the
+  `auth.users` cascade clears profile → listings → listing_images; storage paths are
+  read *before* the delete and the objects removed *after*, so the worst failure is
+  orphaned files rather than a live member's photos being destroyed). **Deactivate**
+  sets `profiles.deactivated_at` and is fully reversible. Deactivation is enforced by
+  folding the check into `is_member()`, which every RLS policy already calls — so one
+  function definition revokes read and write access everywhere, rather than each
+  policy growing its own condition. Admin accounts are exempt from both: the app has
+  no password reset and no UI to grant `is_admin`, so removing the last admin would
+  permanently orphan the community.
 
 ## Out of scope (v1)
 Categories/tags, "reveal contact" gating, in-app messaging, private image bucket

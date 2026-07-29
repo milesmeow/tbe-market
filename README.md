@@ -14,8 +14,14 @@ Built with **Next.js (App Router)**, **Supabase** (Postgres + Auth + Storage),
 ## How it works
 
 - **Auth & access** — Supabase Auth. A request must (1) be logged in, (2) have a
-  `profiles` row (be a member), and (3) have completed the first-login password
-  change. All three are enforced in `proxy.ts` and re-checked in pages.
+  `profiles` row (be a member), (3) not be deactivated, and (4) have completed
+  the first-login password change. All four are enforced in `proxy.ts` and
+  re-checked in pages.
+- **Removing members** — admins can either **Remove** a member (deletes their
+  account, listings, and photos — permanent) or **Deactivate** them (keeps
+  everything, revokes sign-in, hides their listings; reversible via
+  **Reactivate**). Admin accounts are exempt from both, so the community can't
+  be locked out of its own invite screen.
 - **Invites** — only admins can invite. The invite creates the auth user with a
   temporary password (service-role key, server-side only) and either emails it via
   Resend or, when email is switched off, shows it on the invite screen for the
@@ -36,9 +42,13 @@ new one for this app (Dashboard → New project).
 
 In the new project:
 
-1. **SQL** — open the SQL editor and run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql).
-   This creates the tables, RLS policies, the `listing-images` storage bucket,
-   and triggers.
+1. **SQL** — open the SQL editor and run the migrations **in order**:
+   [`0001_init.sql`](supabase/migrations/0001_init.sql) creates the tables, RLS
+   policies, the `listing-images` storage bucket, and triggers;
+   [`0002_member_deactivation.sql`](supabase/migrations/0002_member_deactivation.sql)
+   adds member deactivation. Both are idempotent, so re-running is safe. Apply
+   them **before** deploying app code that expects them — the app reads
+   `profiles.deactivated_at`, and Postgres rejects the query until it exists.
 2. **Auth → Providers → Email** — turn **off** "Allow new users to sign up"
    (this app is invite-only).
 3. **Auth → SMTP** (optional but recommended) — set Resend's SMTP credentials so
