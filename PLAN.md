@@ -104,9 +104,15 @@ Design: [docs/superpowers/specs/2026-07-30-in-app-messaging-design.md](docs/supe
 - [ ] **Run `0003_messaging.sql`** in the SQL editor — required before this code runs
 - [x] Query layer [`lib/messages.ts`](lib/messages.ts) + [tests](lib/messages.test.ts)
 - [x] Compose form on the listing page — [components/MessageSellerForm.tsx](components/MessageSellerForm.tsx)
-- [x] Inbox at [`/messages`](<app/(app)/messages/page.tsx>), grouped by item, with a Sent section
 - [x] Unread badge in the authenticated nav
 - [x] `vitest.config.ts` so tests resolve the `@/*` path alias
+
+### Phase 10b — Replies (two-way conversations)
+- [x] Migration written: [`0004_message_replies.sql`](supabase/migrations/0004_message_replies.sql) — `reply_to_thread()`, `mark_thread_read()`, listing FK `cascade` → `set null`
+- [ ] **Run `0004_message_replies.sql`** in the SQL editor
+- [x] Conversation list at [`/messages`](<app/(app)/messages/page.tsx>) — flat, both roles, newest first
+- [x] Thread page [`/messages/[id]`](<app/(app)/messages/[id]/page.tsx>) with full history + [reply box](components/ReplyForm.tsx)
+- [x] First message from a listing redirects into the new thread
 
 ---
 
@@ -132,9 +138,13 @@ Design: [docs/superpowers/specs/2026-07-30-in-app-messaging-design.md](docs/supe
 - [ ] RLS check: a member cannot edit/delete another member's listing
 - [ ] Repeat smoke test against the deployed Vercel URL
 
-**Messaging (Phase 10) — needs `0003` applied first:**
-- [ ] Member B messages A's item → A's nav badge reads 1
-- [ ] A opens `/messages`: message flagged **New**, with B's contact details; reload clears the badge
+**Messaging (Phase 10) — needs `0003` and `0004` applied first:**
+- [x] Member B messages A's item → A can read it
+- [ ] Sending redirects B into the new thread
+- [ ] A's nav badge reads 1; opening the thread clears it, and the list alone does *not*
+- [ ] A replies → B sees it, and A's own reply does not mark A's badge unread
+- [ ] Reply still works after A marks the item **sold**
+- [ ] Delete the listing → the conversation survives, showing "item no longer available"
 - [ ] Owner sees no compose form on their own listing; sold listings show none either
 - [ ] RLS check: member C cannot read A and B's thread via PostgREST — the database refuses it
 - [ ] RLS check: a direct PostgREST `insert` into `messages` fails (no insert policy exists)
@@ -203,10 +213,21 @@ Design: [docs/superpowers/specs/2026-07-30-in-app-messaging-design.md](docs/supe
   let a recipient stamp `seller_read_at` would also let them rewrite `listing_id` or edit a
   message sent to them.
 
+- **2026-07-30 — Replies, and one schema reversal:** the inbox's Received/Sent split was
+  dropped for a single conversation list, because those labels describe who *started* a
+  thread — meaningless once both sides talk. Replies are allowed on **sold and deleted**
+  listings even though starting a thread still requires an active one: "sorry, it just sold"
+  is exactly the message needed after marking something sold. That forced reversing a
+  decision from `0003`: `message_threads.listing_id` cascaded on listing deletion, so
+  deleting an item destroyed the discussion about it. It is now `on delete set null`, and
+  the thread outlives the listing. `mark_threads_read()` was **dropped** rather than kept —
+  stamping every thread at once suited a list that showed whole conversations, but would
+  now clear New pills on threads never opened.
+
 ## Out of scope (v1)
 Categories/tags, "reveal contact" gating, private image bucket with signed URLs,
 Resend domain verification for production sending.
 
-**Deliberately deferred within messaging (see Phase 10):** replies, email
-notification of new messages, admin visibility into messages, block/report, rate
-limiting, attachments, realtime.
+**Deliberately deferred within messaging (see Phase 10):** email notification of new
+messages, admin visibility into messages, block/report, rate limiting, attachments,
+realtime. (Replies shipped in Phase 10b.)

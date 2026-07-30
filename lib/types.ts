@@ -47,7 +47,11 @@ export type ListingImage = {
  */
 export type MessageThread = {
   id: string;
-  listing_id: string;
+  /**
+   * Null once the listing is deleted — the conversation outlives the item rather
+   * than vanishing with it. See `0004_message_replies.sql`.
+   */
+  listing_id: string | null;
   buyer_id: string;
   seller_id: string;
   /** Who sent the newest message; keeps the unread badge from counting your own. */
@@ -133,13 +137,21 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
-      /** Sends a message and returns the thread id. Raises on any rejection. */
+      /** Starts (or adds to) a thread about a listing. Raises on any rejection. */
       send_listing_message: {
         Args: { p_listing_id: string; p_body: string };
         Returns: string;
       };
-      /** Stamps the caller's own side of every thread they're party to. */
-      mark_threads_read: { Args: Record<string, never>; Returns: undefined };
+      /**
+       * Posts to an existing thread. Unlike send_listing_message this ignores the
+       * listing's status, so a seller can still answer after marking it sold.
+       */
+      reply_to_thread: {
+        Args: { p_thread_id: string; p_body: string };
+        Returns: string;
+      };
+      /** Stamps the caller's own side of one thread as read. */
+      mark_thread_read: { Args: { p_thread_id: string }; Returns: undefined };
       /** Threads with activity the caller hasn't seen — powers the nav badge. */
       unread_thread_count: { Args: Record<string, never>; Returns: number };
     };

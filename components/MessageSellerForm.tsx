@@ -22,27 +22,13 @@ import { MAX_MESSAGE_LENGTH } from "@/lib/config";
  * reach them, not a replacement for the other two, and the helper text says plainly
  * that it isn't the fast one.
  */
-export function MessageSellerForm({
-  listingId,
-  sellerName,
-}: {
-  listingId: string;
-  sellerName: string;
-}) {
+export function MessageSellerForm({ listingId }: { listingId: string }) {
+  // No success branch: a successful send redirects into the new conversation, so
+  // the only state this form ever renders is a failure.
   const [state, formAction] = useActionState<MessageFormState, FormData>(
     sendMessage,
     {},
   );
-
-  if (state.success) {
-    return (
-      <div className="mt-4 border-t border-slate-100 pt-4">
-        <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
-          Message sent. {sellerName} will see it next time they visit.
-        </p>
-      </div>
-    );
-  }
 
   return (
     <form

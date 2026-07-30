@@ -1,15 +1,25 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  groupByListing,
   isUnreadFor,
+  lastMessage,
+  otherParty,
   sortedMessages,
   validateMessageBody,
 } from "./messages";
-import type { Message, ThreadWithDetails } from "./types";
+import type { ContactProfile, Message, ThreadWithDetails } from "./types";
 
 const BUYER = "buyer-1";
 const SELLER = "seller-1";
+
+function profile(id: string, name: string): ContactProfile {
+  return {
+    id,
+    display_name: name,
+    contact_email: `${name.toLowerCase()}@example.com`,
+    contact_phone: null,
+  };
+}
 
 /** A thread with sane defaults; override only what a test cares about. */
 function thread(overrides: Partial<ThreadWithDetails> = {}): ThreadWithDetails {
@@ -30,8 +40,8 @@ function thread(overrides: Partial<ThreadWithDetails> = {}): ThreadWithDetails {
       status: "active",
     },
     messages: [],
-    buyer: null,
-    seller: null,
+    buyer: profile(BUYER, "Dana"),
+    seller: profile(SELLER, "Sam"),
     ...overrides,
   };
 }
@@ -117,31 +127,38 @@ describe("isUnreadFor", () => {
   });
 });
 
-describe("groupByListing", () => {
-  it("collects threads about the same listing", () => {
-    const groups = groupByListing([
-      thread({ id: "a", listing_id: "listing-1" }),
-      thread({ id: "b", listing_id: "listing-2" }),
-      thread({ id: "c", listing_id: "listing-1" }),
-    ]);
-
-    expect(groups).toHaveLength(2);
-    expect(groups[0].listingId).toBe("listing-1");
-    expect(groups[0].threads.map((t) => t.id)).toEqual(["a", "c"]);
-    expect(groups[1].threads.map((t) => t.id)).toEqual(["b"]);
+describe("otherParty", () => {
+  it("shows the buyer to the seller", () => {
+    expect(otherParty(thread(), SELLER)?.display_name).toBe("Dana");
   });
 
-  it("preserves the order threads arrive in", () => {
-    // The query sorts by recent activity, so the first listing seen stays first.
-    const groups = groupByListing([
-      thread({ listing_id: "newer" }),
-      thread({ listing_id: "older" }),
-    ]);
-    expect(groups.map((g) => g.listingId)).toEqual(["newer", "older"]);
+  it("shows the seller to the buyer", () => {
+    expect(otherParty(thread(), BUYER)?.display_name).toBe("Sam");
   });
 
-  it("returns nothing for an empty inbox", () => {
-    expect(groupByListing([])).toEqual([]);
+  it("returns null for someone who isn't a party", () => {
+    expect(otherParty(thread(), "stranger")).toBeNull();
+  });
+
+  it("tolerates a missing profile embed", () => {
+    expect(otherParty(thread({ buyer: null }), SELLER)).toBeNull();
+  });
+});
+
+describe("lastMessage", () => {
+  it("returns the newest message regardless of array order", () => {
+    const t = thread({
+      messages: [
+        message("first", "2026-07-01T10:00:00Z"),
+        message("third", "2026-07-03T10:00:00Z"),
+        message("second", "2026-07-02T10:00:00Z"),
+      ],
+    });
+    expect(lastMessage(t)?.id).toBe("third");
+  });
+
+  it("returns null for a thread with no messages", () => {
+    expect(lastMessage(thread())).toBeNull();
   });
 });
 

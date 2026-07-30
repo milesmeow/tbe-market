@@ -56,17 +56,17 @@ than duplicating setup steps here.
   `admin.ts` (**service-role, server-only** — invites, member removal/deactivation; never
   expose to the client). Actions using it **bypass RLS**, so their own `callerAdminId()`
   check is the entire authorization boundary — hiding a button is not a control.
-- Schema source of truth: `supabase/migrations/` — `0001_init.sql`, then
-  `0002_member_deactivation.sql`, then `0003_messaging.sql`, applied **manually and in
-  order** in the Supabase SQL editor; TS mirror `lib/types.ts`. Tables: `profiles`,
-  `listings`, `listing_images`, `message_threads`, `messages`.
+- Schema source of truth: `supabase/migrations/` — `0001_init.sql`, `0002_member_deactivation.sql`,
+  `0003_messaging.sql`, `0004_message_replies.sql`, applied **manually and in order** in the
+  Supabase SQL editor; TS mirror `lib/types.ts`. Tables: `profiles`, `listings`,
+  `listing_images`, `message_threads`, `messages`.
   Storage bucket `listing-images` is **public read**, member-only insert, owner-only delete.
 - **The message tables have no write policies at all** — RLS grants `select` and nothing
-  else, and `send_listing_message` / `mark_threads_read` (SECURITY DEFINER) are the only
-  way in. RLS cannot restrict *which columns* an `update` touches, so a policy loose
-  enough to let a recipient stamp `seller_read_at` would also let them rewrite
-  `listing_id` or edit a message sent to them. Don't "fix" a permission error here by
-  adding an insert/update policy; change the function.
+  else, and `send_listing_message` / `reply_to_thread` / `mark_thread_read` (SECURITY
+  DEFINER) are the only way in. RLS cannot restrict *which columns* an `update` touches, so
+  a policy loose enough to let a recipient stamp `seller_read_at` would also let them
+  rewrite `listing_id` or edit a message sent to them. Don't "fix" a permission error here
+  by adding an insert/update policy; change the function.
 - **Migrate before deploying code that reads a new column.** PostgREST 400s on an unknown
   column; the proxy treats a *failed* profile query as "cannot verify" (deny, keep the
   session) rather than "not a member" (sign out) specifically so version skew doesn't
@@ -76,17 +76,21 @@ than duplicating setup steps here.
 
 - **Free = `price_cents = 0`** — there is no separate "free" column; the checkbox is UI
   sugar. `formatPrice(0)` → `"Free"` (`lib/format.ts`).
-- **Messaging is an extra channel, not a privacy feature.** Sellers' email and phone stay
-  visible on every listing; the message form sits *below* them. There is **no email
-  notification** (Resend is off), so a message waits until the seller next signs in — say
-  so in UI copy rather than implying delivery. Messages are private to the two parties,
-  **admins included**. The UI is one-shot (no replies) but the schema is thread-shaped,
-  so adding replies is additive.
+- **Messaging is an extra channel, not a privacy feature.** Contact details stay visible on
+  every listing and inside every thread; the message form sits *below* them. There is **no
+  email notification** (Resend is off), so a message waits until the other person next signs
+  in — say so in UI copy rather than implying delivery. Messages are private to the two
+  parties, **admins included**.
+- **Starting a thread needs an active listing; replying doesn't.** `send_listing_message`
+  checks `status = 'active'`, `reply_to_thread` deliberately does not — a seller has to be
+  able to answer "sorry, it just sold" *after* marking it sold. Likewise `listing_id` is
+  `on delete set null`, so a conversation outlives its listing and the UI falls back to
+  "item no longer available".
 - **Mark-as-read runs in `after()`**, not during render — Next forbids mutations as a
-  render side-effect. `markThreadsRead()` takes an already-built client because a Server
+  render side-effect. `markThreadRead()` takes an already-built client because a Server
   Component may not call `cookies()` inside an `after` callback; a client created during
-  render has already resolved the cookie store. Unread flags are computed *before* the
-  `after()` call, or the visit that reveals a message wouldn't highlight it.
+  render has already resolved the cookie store. It fires on the **thread page only** — the
+  conversation list marks nothing, or New pills would clear on threads never opened.
 - `unreadThreadCount()` returns 0 on error rather than throwing — it runs in the
   authenticated layout, so throwing would take down every signed-in page if `0003`
   hasn't been applied yet.
@@ -104,11 +108,11 @@ than duplicating setup steps here.
   group (`listings/`, `profile/`, `messages/`, `admin/invite/`, shared `layout.tsx` +
   `actions.ts`).
 - `components/` — shared UI (`ListingCard`, `ListingForm`, `Gallery`, `ConfirmButton`,
-  `MessageSellerForm`, `ui`).
+  `MessageSellerForm`, `ReplyForm`, `ui`).
 - `lib/` — `supabase/` clients + `middleware.ts`, `listings.ts`, `messages.ts`, `image.ts`,
   `format.ts`, `config.ts`, `types.ts`.
 - `supabase/` — `migrations/` (`0001_init.sql`, `0002_member_deactivation.sql`,
-  `0003_messaging.sql`), `seed_admin.sql`. `types/` — ambient decls.
+  `0003_messaging.sql`, `0004_message_replies.sql`), `seed_admin.sql`. `types/` — ambient decls.
 - `docs/superpowers/specs/` — design docs for larger features.
 
 ## Git

@@ -99,12 +99,7 @@ export default async function ListingDetailPage({
             {/* Hidden for the owner (messaging yourself) and on sold items. The
                 database refuses both cases too — this only avoids offering a
                 button that cannot work. */}
-            {!isOwner && !isSold && (
-              <MessageSellerForm
-                listingId={listing.id}
-                sellerName={seller?.display_name ?? "The seller"}
-              />
-            )}
+            {!isOwner && !isSold && <MessageSellerForm listingId={listing.id} />}
           </div>
 
           {isOwner && (

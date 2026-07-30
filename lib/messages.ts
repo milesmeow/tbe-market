@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { MAX_MESSAGE_LENGTH } from "@/lib/config";
 import { createClient } from "@/lib/supabase/server";
 import type {
+  ContactProfile,
   Database,
   Message,
   ThreadWithDetails,
@@ -74,72 +75,81 @@ export function isUnreadFor(
   return new Date(thread.last_message_at) > new Date(readAt);
 }
 
-/** A listing and the threads about it, for the grouped inbox. */
-export interface ThreadGroup {
-  listingId: string;
-  listing: ThreadWithDetails["listing"];
-  threads: ThreadWithDetails[];
-}
-
 /**
- * Group threads under the listing they concern, preserving the order they arrive
- * in — the query sorts by recent activity, so the busiest item stays on top.
+ * Whoever the given member is talking *to*. A conversation list shows one row per
+ * thread regardless of who started it, so the name it displays depends on which
+ * side the viewer is on. Returns null for a non-party.
  */
-export function groupByListing(threads: ThreadWithDetails[]): ThreadGroup[] {
-  const groups: ThreadGroup[] = [];
-  const byListing = new Map<string, ThreadGroup>();
-
-  for (const thread of threads) {
-    let group = byListing.get(thread.listing_id);
-    if (!group) {
-      group = {
-        listingId: thread.listing_id,
-        listing: thread.listing,
-        threads: [],
-      };
-      byListing.set(thread.listing_id, group);
-      groups.push(group);
-    }
-    group.threads.push(thread);
-  }
-
-  return groups;
+export function otherParty(
+  thread: Pick<ThreadWithDetails, "buyer_id" | "seller_id" | "buyer" | "seller">,
+  userId: string,
+): ContactProfile | null {
+  if (thread.seller_id === userId) return thread.buyer;
+  if (thread.buyer_id === userId) return thread.seller;
+  return null;
 }
 
 /** A thread's messages oldest-first. Mirrors sortedImages() in lib/listings.ts. */
-export function sortedMessages(thread: ThreadWithDetails): Message[] {
+export function sortedMessages(
+  thread: Pick<ThreadWithDetails, "messages">,
+): Message[] {
   return [...(thread.messages ?? [])].sort(
     (a, b) => Date.parse(a.created_at) - Date.parse(b.created_at),
   );
+}
+
+/** The most recent message, for the conversation list's preview line. */
+export function lastMessage(
+  thread: Pick<ThreadWithDetails, "messages">,
+): Message | null {
+  const messages = sortedMessages(thread);
+  return messages[messages.length - 1] ?? null;
 }
 
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
 
-async function threadsFor(
-  column: "seller_id" | "buyer_id",
+/**
+ * Every conversation the member is part of, newest activity first — both the ones
+ * they started as a buyer and the ones about their own listings. Once either side
+ * can reply, "received" and "sent" stop describing a thread, so the list is flat.
+ */
+export async function getConversations(
   userId: string,
 ): Promise<ThreadWithDetails[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("message_threads")
     .select(THREAD_SELECT)
-    .eq(column, userId)
+    // Interpolated into a PostgREST filter, so it must not be user-supplied text.
+    // It isn't: callers pass the id from auth.getUser(), a UUID the server read
+    // from the verified session. RLS restricts the rows regardless.
+    .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`)
     .order("last_message_at", { ascending: false });
 
   if (error) throw error;
   return (data ?? []) as unknown as ThreadWithDetails[];
 }
 
-/** Threads about listings the member is selling — what they've received. */
-export function getInbox(userId: string): Promise<ThreadWithDetails[]> {
-  return threadsFor("seller_id", userId);
-}
+/**
+ * One conversation with its full history, or null.
+ *
+ * RLS is the access check: a member who isn't a party gets no row back, so callers
+ * can treat null as "not found" without a separate ownership test.
+ */
+export async function getThread(
+  threadId: string,
+): Promise<ThreadWithDetails | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("message_threads")
+    .select(THREAD_SELECT)
+    .eq("id", threadId)
+    .maybeSingle();
 
-/** Threads the member started as a buyer — what they've sent. */
-export function getSentThreads(userId: string): Promise<ThreadWithDetails[]> {
-  return threadsFor("buyer_id", userId);
+  if (error) throw error;
+  return (data as unknown as ThreadWithDetails) ?? null;
 }
 
 /**
@@ -157,15 +167,18 @@ export async function unreadThreadCount(): Promise<number> {
 }
 
 /**
- * Stamp the caller's own side of every thread they're party to as read.
+ * Stamp one thread as read on the caller's own side.
  *
  * Takes an existing client instead of creating one, because this runs inside
- * `after()` from an inbox page render. Server Components may not call `cookies()`
+ * `after()` from a thread page render. Server Components may not call `cookies()`
  * inside an `after` callback, but a client built during render has already
  * resolved the cookie store and closes over it — so it works from either place.
  * Failures are swallowed: a missed read-stamp shows a stale badge, which is not
  * worth failing a page over.
  */
-export async function markThreadsRead(supabase: DB): Promise<void> {
-  await supabase.rpc("mark_threads_read");
+export async function markThreadRead(
+  supabase: DB,
+  threadId: string,
+): Promise<void> {
+  await supabase.rpc("mark_thread_read", { p_thread_id: threadId });
 }

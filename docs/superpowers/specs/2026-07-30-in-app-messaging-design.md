@@ -169,9 +169,64 @@ each RPC gets one typed wrapper.
 
 ## Out of scope
 
-Reply UI, email notifications, admin visibility, block and report, rate limiting, attachments,
+Email notifications, admin visibility, block and report, rate limiting, attachments,
 realtime updates. Rate limiting specifically: the community is small and invite-only, and the
 2000-character cap plus one-thread-per-buyer-per-item already blunt the obvious abuse.
+
+*(Reply UI was originally out of scope too — see the update below.)*
+
+---
+
+# Update, 2026-07-30 — replies
+
+Phase two, taken immediately after the one-shot version shipped. Because the schema was
+already thread-shaped, `0004_message_replies.sql` adds no tables and no columns.
+
+## Decisions
+
+| Question | Decision | Reason |
+| --- | --- | --- |
+| Inbox shape | One flat conversation list → `/messages/[id]` thread pages | Received/Sent describes *who spoke first*, which stops being meaningful once both sides talk. |
+| Replies on sold or deleted items | Always allowed | "Sorry, it just sold" is precisely the message someone needs to send after marking it sold. Blocking it severs the conversation at the worst moment. |
+| Starting a thread | Still requires an active listing | Unchanged from phase one. |
+
+## Schema change
+
+`message_threads.listing_id` was `not null … on delete cascade`, so deleting a listing
+**destroyed the conversation about it**. It is now nullable with `on delete set null`: the
+thread survives and the UI shows "item no longer available" — a state it already rendered,
+for listings RLS hides. Nulls are distinct in a Postgres unique index, so
+`unique (listing_id, buyer_id)` is unaffected, and nothing can create a null-listing thread
+directly because `send_listing_message` still demands an active listing.
+
+## Functions
+
+- **`reply_to_thread(p_thread_id, p_body)`** — caller must be a party with both parties
+  active (via `is_thread_participant`), body within bounds. Deliberately does **not** check
+  listing status. Bumps `last_message_at` and `last_sender_id`.
+- **`mark_thread_read(p_thread_id)`** replaces `mark_threads_read()`, which is dropped. The
+  old one stamped every thread at once — fine when the whole conversation was visible in the
+  list, wrong now that reading happens on a thread page, where it would clear New pills on
+  conversations the member never opened.
+
+`last_sender_id`, added in phase one "for later", now does its job: without it a member's own
+reply would light up their own unread badge.
+
+## UI
+
+`/messages` is a flat list ordered by recent activity: the other party, the item, the latest
+message (prefixed `You:` when it's yours), relative time, and a New pill. It marks nothing
+read. `/messages/[id]` shows the item header, the other party's contact links, the full
+history as left/right bubbles, and a reply box, and marks *that* thread read via `after()`.
+
+Sending the first message from a listing now **redirects into the new thread** rather than
+showing a confirmation — otherwise a conversation is hard to find from the place it starts.
+
+## What did not change
+
+Two-party privacy with no admin access, no email notification, the 2000-character cap, and
+the rule that all writes go through `SECURITY DEFINER` functions with no insert, update or
+delete policies on either table.
 
 ## Verification
 

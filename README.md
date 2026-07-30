@@ -32,13 +32,15 @@ Built with **Next.js (App Router)**, **Supabase** (Postgres + Auth + Storage),
 - **Photos** — resized and compressed in the browser before upload, and iPhone
   **HEIC/HEIF converted to JPEG** automatically (see `lib/image.ts`). Keeps
   uploads small and web-displayable.
-- **Messaging** — a member can send a note about an item from the listing page,
-  and read what they've received at **/messages**, with an unread count in the
-  nav. It's an *additional* way to reach a seller: contact details stay visible,
-  and there's no reply box yet — the seller answers by email or phone. **There is
-  no email notification**, so a message waits until the seller next visits. See
+- **Messaging** — a member can ask about an item from the listing page, and both
+  sides then carry on the conversation at **/messages**, with an unread count in
+  the nav. It's an *additional* way to reach someone: contact details stay
+  visible throughout. **There is no email notification**, so a message waits
+  until the other person next visits. Starting a thread needs an active listing,
+  but **replies keep working after an item is sold or deleted** — that's when
+  "sorry, it just went" needs saying. Messages are private to the two members;
+  admins cannot read them. See
   [the design doc](docs/superpowers/specs/2026-07-30-in-app-messaging-design.md).
-  Messages are private to the two members; admins cannot read them.
 
 ## One-time setup
 
@@ -55,7 +57,8 @@ In the new project:
    [`0002_member_deactivation.sql`](supabase/migrations/0002_member_deactivation.sql)
    adds member deactivation;
    [`0003_messaging.sql`](supabase/migrations/0003_messaging.sql) adds in-app
-   messaging. All are idempotent, so re-running is safe. Apply them **before**
+   messaging; [`0004_message_replies.sql`](supabase/migrations/0004_message_replies.sql)
+   makes conversations two-way. All are idempotent, so re-running is safe. Apply them **before**
    deploying app code that expects them — the app reads `profiles.deactivated_at`,
    and Postgres rejects the query until it exists.
 2. **Auth → Providers → Email** — turn **off** "Allow new users to sign up"
@@ -144,7 +147,7 @@ app/
     page.tsx              Listings grid (home)
     listings/            Create / detail / edit + server actions
     profile/             Member profile (display name + contact info)
-    messages/            Inbox + send-message action
+    messages/            Conversation list, thread pages, send/reply actions
     admin/invite/        Admin-only member invite + list
 components/               Shared UI (cards, forms, gallery, buttons)
 lib/
@@ -158,7 +161,8 @@ lib/
 docs/superpowers/specs/   Design docs for larger features
 types/                    Ambient type declarations (e.g. heic2any)
 supabase/
-  migrations/            0001 schema/RLS/storage, 0002 deactivation, 0003 messaging
+  migrations/            0001 schema/RLS/storage, 0002 deactivation,
+                         0003 messaging, 0004 replies
   seed_admin.sql             Grant the first admin
 proxy.ts                  Session refresh + route protection (Next 16 "proxy")
 ```
@@ -176,8 +180,12 @@ proxy.ts                  Session refresh + route protection (Next 16 "proxy")
   checkbox is UI sugar and the price renders as "Free".
 - **Messages have no insert/update/delete RLS policies at all.** Every write goes
   through a `SECURITY DEFINER` function (`send_listing_message`,
-  `mark_threads_read`), because RLS cannot restrict *which columns* an update
-  touches — a policy permissive enough to let a recipient mark a thread read would
-  also let them rewrite it. Messages are append-only as a result.
+  `reply_to_thread`, `mark_thread_read`), because RLS cannot restrict *which
+  columns* an update touches — a policy permissive enough to let a recipient mark
+  a thread read would also let them rewrite it. Messages are append-only as a
+  result.
+- **A conversation outlives its listing.** `message_threads.listing_id` is
+  `on delete set null`, so deleting an item doesn't erase the discussion about
+  it; the thread renders "item no longer available" instead.
 - To rename the app, change `APP_NAME` in `lib/config.ts` or set
   `NEXT_PUBLIC_APP_NAME`.
