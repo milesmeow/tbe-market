@@ -86,6 +86,10 @@ than duplicating setup steps here.
   able to answer "sorry, it just sold" *after* marking it sold. Likewise `listing_id` is
   `on delete set null`, so a conversation outlives its listing and the UI falls back to
   "item no longer available".
+- **`getThreadsForListing()` takes no role argument on purpose** — RLS returns a buyer their
+  own thread and a seller every thread about their item, so one query drives both listing-page
+  panels. Ownership is checked only to pick a heading, never to decide which rows are safe to
+  show.
 - **Mark-as-read runs in `after()`**, not during render — Next forbids mutations as a
   render side-effect. `markThreadRead()` takes an already-built client because a Server
   Component may not call `cookies()` inside an `after` callback; a client created during
@@ -108,7 +112,7 @@ than duplicating setup steps here.
   group (`listings/`, `profile/`, `messages/`, `admin/invite/`, shared `layout.tsx` +
   `actions.ts`).
 - `components/` — shared UI (`ListingCard`, `ListingForm`, `Gallery`, `ConfirmButton`,
-  `MessageSellerForm`, `ReplyForm`, `ui`).
+  `MessageSellerForm`, `ReplyForm`, `ThreadRow`, `ui`).
 - `lib/` — `supabase/` clients + `middleware.ts`, `listings.ts`, `messages.ts`, `image.ts`,
   `format.ts`, `config.ts`, `types.ts`.
 - `supabase/` — `migrations/` (`0001_init.sql`, `0002_member_deactivation.sql`,

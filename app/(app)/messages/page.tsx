@@ -1,13 +1,7 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { formatRelativeTime } from "@/lib/format";
-import {
-  getConversations,
-  isUnreadFor,
-  lastMessage,
-  otherParty,
-} from "@/lib/messages";
+import { ThreadRow } from "@/components/ThreadRow";
+import { getConversations } from "@/lib/messages";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -40,56 +34,11 @@ export default async function MessagesPage() {
         </p>
       ) : (
         <ul className="mt-6 space-y-2">
-          {threads.map((thread) => {
-            const other = otherParty(thread, user.id);
-            const latest = lastMessage(thread);
-            const isNew = isUnreadFor(thread, user.id);
-            const sentByMe = latest?.sender_id === user.id;
-
-            return (
-              <li key={thread.id}>
-                <Link
-                  href={`/messages/${thread.id}`}
-                  className="block rounded-xl border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:bg-slate-50"
-                >
-                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                    <span
-                      className={
-                        isNew
-                          ? "text-sm font-semibold text-slate-900"
-                          : "text-sm font-medium text-slate-900"
-                      }
-                    >
-                      {other?.display_name ?? "A member"}
-                    </span>
-                    <span className="text-sm text-slate-500">
-                      ·{" "}
-                      {thread.listing?.title ?? (
-                        <span className="italic">Item no longer available</span>
-                      )}
-                    </span>
-                    {isNew && (
-                      <span className="rounded-full bg-gold-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gold-700">
-                        New
-                      </span>
-                    )}
-                    <span className="ml-auto shrink-0 text-xs text-slate-400">
-                      {formatRelativeTime(thread.last_message_at)}
-                    </span>
-                  </div>
-
-                  {latest && (
-                    <p className="mt-1 truncate text-sm text-slate-600">
-                      {sentByMe && (
-                        <span className="text-slate-400">You: </span>
-                      )}
-                      {latest.body}
-                    </p>
-                  )}
-                </Link>
-              </li>
-            );
-          })}
+          {threads.map((thread) => (
+            <li key={thread.id}>
+              <ThreadRow thread={thread} viewerId={user.id} showListing />
+            </li>
+          ))}
         </ul>
       )}
     </div>

@@ -34,7 +34,8 @@ Built with **Next.js (App Router)**, **Supabase** (Postgres + Auth + Storage),
   uploads small and web-displayable.
 - **Messaging** — a member can ask about an item from the listing page, and both
   sides then carry on the conversation at **/messages**, with an unread count in
-  the nav. It's an *additional* way to reach someone: contact details stay
+  the nav. The listing itself shows any conversation you already have about it,
+  and shows the owner everyone who has asked. It's an *additional* way to reach someone: contact details stay
   visible throughout. **There is no email notification**, so a message waits
   until the other person next visits. Starting a thread needs an active listing,
   but **replies keep working after an item is sold or deleted** — that's when

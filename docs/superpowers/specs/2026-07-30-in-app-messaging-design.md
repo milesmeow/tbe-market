@@ -228,6 +228,32 @@ Two-party privacy with no admin access, no email notification, the 2000-characte
 the rule that all writes go through `SECURITY DEFINER` functions with no insert, update or
 delete policies on either table.
 
+---
+
+# Update, 2026-07-30 — conversations on the listing page
+
+Moving conversations onto thread pages left the listing page unaware of them: a buyer who had
+already written saw an empty compose box, an owner saw no sign anyone had asked, and a sold
+listing offered no route to an existing conversation at all. No migration — `0003`'s policies
+already return the right rows.
+
+- **Buyer with a thread:** the compose box is replaced by a panel linking into the
+  conversation. It shows on sold items too; only the compose box stays hidden.
+- **Owner:** an "Interest in this item" panel lists every conversation about it.
+
+**One query serves both roles with no role branching**, because RLS discriminates:
+`select * from message_threads where listing_id = ?` returns the buyer's single thread, or
+every thread to the seller, or nothing to anyone else. `getThreadsForListing()` therefore takes
+no role argument; the page only checks ownership to pick a heading and decide whether to offer
+the compose box.
+
+`components/ThreadRow.tsx` is shared by the conversation list and both listing panels, and
+composes the tested helpers (`otherParty`, `lastMessage`, `isUnreadFor`) rather than
+re-deriving them — those rules are subtle enough that a second copy would eventually disagree.
+
+Nothing is marked read from a listing: that happens only when a thread is opened, for the same
+reason `mark_threads_read()` was dropped in `0004`.
+
 ## Verification
 
 Static gates (`tsc`, `lint`, `test`, `build`) never exercise RLS, so the security claims need

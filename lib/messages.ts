@@ -133,6 +133,28 @@ export async function getConversations(
 }
 
 /**
+ * Conversations about one listing, newest activity first.
+ *
+ * Takes no role argument on purpose: RLS already discriminates. A buyer gets back
+ * their single thread; the seller gets every thread about their item; anyone else
+ * gets nothing. The caller still needs to know who owns the listing, but only to
+ * pick a heading — never to decide which rows are safe to show.
+ */
+export async function getThreadsForListing(
+  listingId: string,
+): Promise<ThreadWithDetails[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("message_threads")
+    .select(THREAD_SELECT)
+    .eq("listing_id", listingId)
+    .order("last_message_at", { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as unknown as ThreadWithDetails[];
+}
+
+/**
  * One conversation with its full history, or null.
  *
  * RLS is the access check: a member who isn't a party gets no row back, so callers

@@ -114,6 +114,13 @@ Design: [docs/superpowers/specs/2026-07-30-in-app-messaging-design.md](docs/supe
 - [x] Thread page [`/messages/[id]`](<app/(app)/messages/[id]/page.tsx>) with full history + [reply box](components/ReplyForm.tsx)
 - [x] First message from a listing redirects into the new thread
 
+### Phase 10c — Conversations on the listing page
+No migration; `0003`'s policies already return the right rows.
+- [x] `getThreadsForListing()` — one query, no role argument (RLS discriminates)
+- [x] Shared [`ThreadRow`](components/ThreadRow.tsx) used by the list and both listing panels
+- [x] Buyer with a thread sees it in place of the compose box, sold items included
+- [x] Owner sees an "Interest in this item" panel listing everyone who asked
+
 ---
 
 ## Verification
@@ -145,6 +152,9 @@ Design: [docs/superpowers/specs/2026-07-30-in-app-messaging-design.md](docs/supe
 - [ ] A replies → B sees it, and A's own reply does not mark A's badge unread
 - [ ] Reply still works after A marks the item **sold**
 - [ ] Delete the listing → the conversation survives, showing "item no longer available"
+- [ ] Buyer revisiting an item they've messaged sees the conversation, not a blank compose box
+- [ ] Owner sees "Interest in this item" listing everyone who asked
+- [ ] A third member with no thread on that listing sees neither panel
 - [ ] Owner sees no compose form on their own listing; sold listings show none either
 - [ ] RLS check: member C cannot read A and B's thread via PostgREST — the database refuses it
 - [ ] RLS check: a direct PostgREST `insert` into `messages` fails (no insert policy exists)
