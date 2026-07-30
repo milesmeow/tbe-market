@@ -21,7 +21,7 @@ than duplicating setup steps here.
 - **Tailwind CSS v4** — PostCSS-based, **no `tailwind.config`** (see `postcss.config.mjs`).
 - **heic2any** — HEIC/HEIF → JPEG conversion. **Vitest** — tests. **ESLint 9** (flat
   config). Package manager: **npm**.
-- Node **>=18.18** (`.nvmrc` pins 20.19.1; Node 20 recommended). **Gotcha:** fresh
+- Node **>=20.9** (what Next 16 requires; `.nvmrc` pins 20.19.1). **Gotcha:** fresh
   shells default to Node v11 — prefix PATH with nvm's v20 before building.
 
 ## Commands

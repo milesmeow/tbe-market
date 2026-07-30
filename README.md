@@ -89,7 +89,8 @@ cp .env.local.example .env.local
 
 ## Run locally
 
-This project targets **Node 18.18+** (see `.nvmrc` — Node 20 recommended).
+This project targets **Node 20.9+** — the minimum Next 16 itself requires (see
+`.nvmrc`, which pins 20.19.1).
 
 ```bash
 nvm use        # or ensure Node >= 18.18
