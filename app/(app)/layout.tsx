@@ -33,7 +33,9 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="min-h-screen">
+    // flex-1, not min-h-screen: claims the space left over by the root layout's
+    // footer instead of demanding a full viewport and pushing it below the fold.
+    <div className="flex-1">
       <header className="border-b border-slate-200 bg-white">
         <nav className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
           <Link href="/" className="flex items-center gap-2.5">
