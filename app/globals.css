@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+:root {
+  /* Warm cream page background + deep-navy foreground, echoing Temple Beth El */
+  --background: #faf8f4;
+  --foreground: #16293d;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-serif: var(--font-fraunces);
+  --font-mono: var(--font-geist-mono);
+}
+
+/*
+ * Brand palette. The app was built entirely on Tailwind's `slate` scale, so we
+ * override that scale in place — warm stone/cream at the light end shifting to
+ * deep navy at the dark end — which re-skins every existing `*-slate-*` class
+ * site-wide. `gold` is a new warm accent for CTAs, prices, and focus rings.
+ */
+@theme {
+  --color-slate-50: #faf8f4;
+  --color-slate-100: #f1ede4;
+  --color-slate-200: #e3ddd0;
+  --color-slate-300: #cec6b5;
+  --color-slate-400: #a39a86;
+  --color-slate-500: #736b5b;
+  --color-slate-600: #45566b;
+  --color-slate-700: #2f4059;
+  --color-slate-800: #21344b;
+  --color-slate-900: #16293d;
+
+  --color-gold-50: #fbf6e8;
+  --color-gold-100: #f7eecf;
+  --color-gold-200: #ecdcae;
+  --color-gold-300: #ddc178;
+  --color-gold-400: #d0aa52;
+  --color-gold-500: #c79a3f;
+  --color-gold-600: #a97f2c;
+  --color-gold-700: #886520;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Dignified serif headings paired with the sans body text. */
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
+  letter-spacing: -0.01em;
+}
