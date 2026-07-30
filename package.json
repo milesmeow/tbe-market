@@ -10,7 +10,7 @@
     "test": "vitest run"
   },
   "engines": {
-    "node": ">=18.18.0"
+    "node": ">=20.9.0"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",

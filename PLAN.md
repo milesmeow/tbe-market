@@ -14,22 +14,22 @@ Auth, Storage) · Resend (email) · Vercel (hosting). All free tier.
 
 ## Pick up here (handoff)
 
-**State as of 2026-06-16:** App is feature-complete for the MVP and **committed** on
-branch `feature/initial-scaffolding` (working tree clean). It runs locally against a
-live Supabase project; the admin can log in and post listings. All automated checks
-pass (`tsc`, `lint`, `build`, `7/7` tests).
+**State as of 2026-07-28:** App is feature-complete for the MVP on branch `develop`.
+Invites now work **without email**: the admin invite screen shows the new member's
+sign-in details to copy and share by hand (Resend stays unconfigured for the testing
+phase). All automated checks pass (`tsc`, `lint`, `build`, `7/7` tests).
 
 **Blocked on James (not on code):**
 1. Turn **off** public signups in Supabase (Auth → Providers → Email) — do before inviting.
-2. Create a **Resend** account + API key, set `RESEND_API_KEY` / `EMAIL_FROM` in
-   `.env.local`. Until then the invite email can't send, so the end-to-end invite flow
-   is untested.
-3. Deploy to **Vercel** (push branch → import → add env vars incl. production `APP_URL`).
+2. Fast-forward `main` to `develop` and push (`git merge --ff-only develop`).
+3. Create the **Vercel** project (`vercel link`), add env vars, deploy, then set
+   `APP_URL` to the assigned domain and redeploy.
 
-**Suggested next action for a fresh session:** confirm free + no-photo listings render
-(last local check in flight), then once the Resend key exists, walk the End-to-end
-checklist below. Read [README.md](README.md) for setup and [AGENTS.md](AGENTS.md) before
-touching Next.js code (this repo pins Next 16 with breaking changes vs. older docs).
+**Suggested next action for a fresh session:** once deployed, walk the End-to-end
+checklist below against the production URL — especially multi-photo iPhone uploads and
+the free / no-photo listing renders. Read [README.md](README.md) for setup and
+[AGENTS.md](AGENTS.md) before touching Next.js code (this repo pins Next 16 with
+breaking changes vs. older docs).
 
 ---
 
@@ -41,6 +41,8 @@ touching Next.js code (this repo pins Next 16 with breaking changes vs. older do
 
 ## Phase 2 — Database ✅
 - [x] Migration written: [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) — tables, RLS, storage bucket, triggers
+- [x] Migration written: [`0002_member_deactivation.sql`](supabase/migrations/0002_member_deactivation.sql) — `deactivated_at`, `is_active_member()`, policy updates
+- [ ] **Run `0002_member_deactivation.sql`** in the SQL editor — required before this code runs
 - [x] Admin seed script: [`supabase/seed_admin.sql`](supabase/seed_admin.sql)
 - [x] New marketplace Supabase project created (Data API + auto-expose + automatic RLS enabled)
 - [x] Ran `0001_init.sql` in the new project's SQL editor
@@ -52,10 +54,13 @@ touching Next.js code (this repo pins Next 16 with breaking changes vs. older do
 - [x] [Login page + action](app/login/page.tsx)
 - [x] [Forced first-login password change](app/auth/change-password/page.tsx)
 
-## Phase 4 — Member admin ✅ (code) / [!] (needs Resend key)
+## Phase 4 — Member admin ✅
 - [x] [Invite flow + member list](app/(app)/admin/invite/page.tsx) ([actions](app/(app)/admin/invite/actions.ts))
-- [x] Resend transactional invite email
-- [!] Create a Resend account + API key, set `EMAIL_FROM`
+- [x] Resend transactional invite email (code in place; disabled by unset env vars)
+- [x] Email-optional fallback: credentials shown in the admin UI for manual sharing
+- [x] Remove a member (hard delete: account, listings, photos) — admins exempt
+- [x] Deactivate / reactivate a member (reversible: keeps data, revokes access) — admins exempt
+- [ ] Resend account + verified domain — deferred until after the testing phase
 
 ## Phase 5 — Listings ✅
 - [x] Create with multi-photo upload ([new](app/(app)/listings/new/page.tsx) + [actions](app/(app)/listings/actions.ts))
@@ -74,10 +79,12 @@ touching Next.js code (this repo pins Next 16 with breaking changes vs. older do
 - [x] Responsive grid, empty/loading/error states, form validation
 - [x] Shared UI primitives ([components/ui.tsx](components/ui.tsx), cards, forms)
 
-## Phase 8 — Deploy [!]
+## Phase 8 — Deploy 🚧
 - [x] Copy `.env.local.example` → `.env.local`, fill in keys (running locally)
-- [!] Push to GitHub, import in Vercel, add env vars (incl. production `APP_URL`)
-- [!] Deploy
+- [x] Pushed to GitHub (`milesmeow/tbe-market`)
+- [ ] Fast-forward `main` to `develop`, push
+- [ ] `vercel link`, add env vars (omit `RESEND_API_KEY` / `EMAIL_FROM`)
+- [ ] Deploy, set `APP_URL` to the assigned domain, redeploy
 
 ## Phase 9 — Post-MVP refinements ✅
 - [x] Client-side image compression (resize ~1600px, JPEG) — [lib/image.ts](lib/image.ts)
@@ -102,8 +109,8 @@ touching Next.js code (this repo pins Next 16 with breaking changes vs. older do
 - [x] Posts a listing (photo upload working after HEIC + compression fixes)
 - [ ] Verify free + no-photo listings render correctly
 
-### End-to-end (needs Resend for invites) [!]
-- [ ] Admin invites a test member → Resend email arrives with temp password
+### End-to-end (run against the deployed URL) 🚧
+- [ ] Admin invites a test member → credentials block renders, member row appears
 - [ ] Member logs in → forced to change-password → sets new password
 - [ ] Member sets contact info; posts a listing with 2–3 photos
 - [ ] Second member sees the listing + seller contact; non-member sees nothing
@@ -114,8 +121,9 @@ touching Next.js code (this repo pins Next 16 with breaking changes vs. older do
 ---
 
 ## Housekeeping
-- [x] Commit the app (committed on branch `feature/initial-scaffolding`)
-- [ ] Open a PR / merge `feature/initial-scaffolding` once deployed and smoke-tested
+- [x] Commit the app (`feature/initial-scaffolding` → `feature/styling-and-logo` → `develop`)
+- [ ] Fast-forward `main` to `develop` so Vercel's Production branch has the app
+- [ ] Delete the merged `feature/*` branches once production is smoke-tested
 
 ## Decisions log
 - **2026-06-15 — DB migrations:** apply [`0001_init.sql`](supabase/migrations/0001_init.sql)
@@ -135,6 +143,27 @@ touching Next.js code (this repo pins Next 16 with breaking changes vs. older do
   a "free" checkbox is UI sugar, and `formatPrice(0)` renders "Free".
 - **2026-06-16 — Optional photos:** listings can be posted without any image; the
   grid and detail views already show a "No photo" placeholder.
+- **2026-07-28 — Ship without invite email:** Resend's shared `onboarding@resend.dev`
+  sender only delivers to the account owner's own address, so reaching real testers
+  would require verifying a domain first. Deferred that: `RESEND_API_KEY` /
+  `EMAIL_FROM` stay unset, and the invite action returns the temp password as
+  structured data for the admin to copy from the UI. Turning email on later is an
+  env-var change with no code edit. Trade-off: manual relay per invite, and still
+  **no self-serve password reset** — a locked-out member needs a reset from the
+  Supabase dashboard.
+- **2026-07-28 — Production branch:** `main` (fast-forwarded from `develop`), so
+  Vercel's default Production branch works unchanged and `develop` keeps getting
+  preview deploys.
+- **2026-07-29 — Member removal, two flavours:** **Remove** hard-deletes (the
+  `auth.users` cascade clears profile → listings → listing_images; storage paths are
+  read *before* the delete and the objects removed *after*, so the worst failure is
+  orphaned files rather than a live member's photos being destroyed). **Deactivate**
+  sets `profiles.deactivated_at` and is fully reversible. Deactivation is enforced by
+  folding the check into `is_member()`, which every RLS policy already calls — so one
+  function definition revokes read and write access everywhere, rather than each
+  policy growing its own condition. Admin accounts are exempt from both: the app has
+  no password reset and no UI to grant `is_admin`, so removing the last admin would
+  permanently orphan the community.
 
 ## Out of scope (v1)
 Categories/tags, "reveal contact" gating, in-app messaging, private image bucket

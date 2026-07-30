@@ -14,11 +14,18 @@ Built with **Next.js (App Router)**, **Supabase** (Postgres + Auth + Storage),
 ## How it works
 
 - **Auth & access** — Supabase Auth. A request must (1) be logged in, (2) have a
-  `profiles` row (be a member), and (3) have completed the first-login password
-  change. All three are enforced in `proxy.ts` and re-checked in pages.
+  `profiles` row (be a member), (3) not be deactivated, and (4) have completed
+  the first-login password change. All four are enforced in `proxy.ts` and
+  re-checked in pages.
+- **Removing members** — admins can either **Remove** a member (deletes their
+  account, listings, and photos — permanent) or **Deactivate** them (keeps
+  everything, revokes sign-in, hides their listings; reversible via
+  **Reactivate**). Admin accounts are exempt from both, so the community can't
+  be locked out of its own invite screen.
 - **Invites** — only admins can invite. The invite creates the auth user with a
-  temporary password (service-role key, server-side only) and emails it via
-  Resend. `must_change_password` forces a reset on first login.
+  temporary password (service-role key, server-side only) and either emails it via
+  Resend or, when email is switched off, shows it on the invite screen for the
+  admin to share. `must_change_password` forces a reset on first login.
 - **Listings** — owners can create/edit/delete their own listings, mark items
   Sold, set a price or flag them **free**, and attach up to 5 photos (optional).
   Row Level Security enforces ownership at the database, not just the UI.
@@ -35,20 +42,34 @@ new one for this app (Dashboard → New project).
 
 In the new project:
 
-1. **SQL** — open the SQL editor and run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql).
-   This creates the tables, RLS policies, the `listing-images` storage bucket,
-   and triggers.
+1. **SQL** — open the SQL editor and run the migrations **in order**:
+   [`0001_init.sql`](supabase/migrations/0001_init.sql) creates the tables, RLS
+   policies, the `listing-images` storage bucket, and triggers;
+   [`0002_member_deactivation.sql`](supabase/migrations/0002_member_deactivation.sql)
+   adds member deactivation. Both are idempotent, so re-running is safe. Apply
+   them **before** deploying app code that expects them — the app reads
+   `profiles.deactivated_at`, and Postgres rejects the query until it exists.
 2. **Auth → Providers → Email** — turn **off** "Allow new users to sign up"
    (this app is invite-only).
 3. **Auth → SMTP** (optional but recommended) — set Resend's SMTP credentials so
    password-reset emails work. Host `smtp.resend.com`, port `465`, user `resend`,
    password = your Resend API key.
 
-### 2. Resend
+### 2. Resend (optional — currently switched off)
+
+Email is **optional**. If `RESEND_API_KEY` / `EMAIL_FROM` are unset, the invite
+screen shows the new member's sign-in details (login URL, email, temporary
+password) for the admin to copy and pass along by text or in person. That is the
+mode this app is deployed in today.
+
+To turn email on:
 
 1. Create an account at [resend.com](https://resend.com) and add an **API key**.
-2. For testing you can send from `onboarding@resend.dev`. For production, verify
-   your own domain and use an address on it.
+2. Verify a domain you own and send from an address on it. The shared
+   `onboarding@resend.dev` sender only delivers to your own Resend account
+   address, so it can't reach invited members.
+3. Set `RESEND_API_KEY` and `EMAIL_FROM`. No code change is needed — the invite
+   action switches to sending automatically.
 
 ### 3. Environment variables
 
@@ -68,7 +89,8 @@ cp .env.local.example .env.local
 
 ## Run locally
 
-This project targets **Node 18.18+** (see `.nvmrc` — Node 20 recommended).
+This project targets **Node 20.9+** — the minimum Next 16 itself requires (see
+`.nvmrc`, which pins 20.19.1).
 
 ```bash
 nvm use        # or ensure Node >= 18.18
@@ -90,11 +112,18 @@ npm run lint    # eslint
 
 ## Deploy to Vercel
 
-1. Push this repo to GitHub and import it in Vercel.
-2. Add the same environment variables from `.env.local` in the Vercel project
-   settings. Set `APP_URL` to your production URL (e.g. `https://yourapp.vercel.app`)
-   so invite emails link to the right place.
-3. Deploy. Vercel runs `npm run build` automatically.
+1. Push this repo to GitHub and import it in Vercel. Production branch is `main`.
+2. Add these environment variables in the Vercel project settings (Production and
+   Preview), copying the values from `.env.local`:
+   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+   `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_NAME`, `APP_URL`.
+   `RESEND_API_KEY` / `EMAIL_FROM` are intentionally left unset (see Resend above).
+3. `APP_URL` needs the domain Vercel assigns, so deploy once, then set `APP_URL`
+   to that URL (no trailing slash) and **redeploy** — env var changes don't apply
+   to an existing deployment.
+4. Before inviting anyone, turn **off** public signups in Supabase
+   (Auth → Providers → Email). The app is invite-only and nothing else blocks
+   self-registration.
 
 ## Project structure
 
