@@ -2,8 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Gallery } from "@/components/Gallery";
+import { MessageSellerForm } from "@/components/MessageSellerForm";
+import { ThreadRow } from "@/components/ThreadRow";
 import { formatPrice } from "@/lib/format";
 import { getListing, imagePublicUrl, sortedImages } from "@/lib/listings";
+import { getThreadsForListing } from "@/lib/messages";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +31,12 @@ export default async function ListingDetailPage({
   );
   const seller = listing.seller;
   const isSold = listing.status === "sold";
+
+  // No role argument: RLS returns the viewer's own thread to a buyer and every
+  // thread to the seller, so this one call covers both views. Nothing is marked
+  // read here — that only happens when a thread is actually opened.
+  const threads = user ? await getThreadsForListing(listing.id) : [];
+  const myThread = threads[0];
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -94,7 +103,42 @@ export default async function ListingDetailPage({
                 </p>
               )}
             </div>
+
+            {/* An existing conversation replaces the compose box: a blank box
+                would hide the seller's reply and invite the buyer to restate
+                themselves. It shows even on a sold item — that's exactly when
+                "did they get back to me?" is the live question. */}
+            {!isOwner && user && myThread && (
+              <div className="mt-4 border-t border-slate-100 pt-4">
+                <h3 className="mb-2 text-sm font-semibold text-slate-900">
+                  Your conversation
+                </h3>
+                <ThreadRow thread={myThread} viewerId={user.id} />
+              </div>
+            )}
+
+            {/* Hidden for the owner (messaging yourself) and on sold items. The
+                database refuses both cases too — this only avoids offering a
+                button that cannot work. */}
+            {!isOwner && !isSold && !myThread && (
+              <MessageSellerForm listingId={listing.id} />
+            )}
           </div>
+
+          {isOwner && user && threads.length > 0 && (
+            <div className="mt-4">
+              <h2 className="text-sm font-semibold text-slate-900">
+                Interest in this item
+              </h2>
+              <ul className="mt-2 space-y-2">
+                {threads.map((thread) => (
+                  <li key={thread.id}>
+                    <ThreadRow thread={thread} viewerId={user.id} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {isOwner && (
             <Link

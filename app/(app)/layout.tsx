@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { APP_NAME } from "@/lib/config";
+import { unreadThreadCount } from "@/lib/messages";
 import { createClient } from "@/lib/supabase/server";
 
 import { signOut } from "./actions";
@@ -32,6 +33,10 @@ export default async function AppLayout({
     redirect("/login");
   }
 
+  // Returns 0 rather than throwing if the messaging migration hasn't been applied
+  // yet — a missing badge beats every signed-in page failing on version skew.
+  const unread = await unreadThreadCount();
+
   return (
     // flex-1, not min-h-screen: claims the space left over by the root layout's
     // footer instead of demanding a full viewport and pushing it below the fold.
@@ -57,6 +62,20 @@ export default async function AppLayout({
               className="rounded-lg bg-gold-500 px-3 py-1.5 font-medium text-slate-900 shadow-sm transition hover:bg-gold-400"
             >
               + Post item
+            </Link>
+            <Link
+              href="/messages"
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-slate-600 hover:bg-slate-100"
+            >
+              Messages
+              {unread > 0 && (
+                <span
+                  aria-label={`${unread} unread`}
+                  className="inline-flex min-w-5 items-center justify-center rounded-full bg-gold-500 px-1.5 text-xs font-semibold text-slate-900"
+                >
+                  {unread}
+                </span>
+              )}
             </Link>
             <Link
               href="/profile"
