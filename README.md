@@ -28,7 +28,9 @@ Built with **Next.js (App Router)**, **Supabase** (Postgres + Auth + Storage),
   admin to share. `must_change_password` forces a reset on first login.
 - **Listings** — owners can create/edit/delete their own listings, mark items
   Sold, set a price or flag them **free**, and attach up to 5 photos (optional).
-  Row Level Security enforces ownership at the database, not just the UI.
+  Row Level Security enforces ownership at the database, not just the UI. The
+  home grid filters by **All / Available / Sold** via `?status=`, so a filtered
+  view can be shared or bookmarked.
 - **Photos** — resized and compressed in the browser before upload, and iPhone
   **HEIC/HEIF converted to JPEG** automatically (see `lib/image.ts`). Keeps
   uploads small and web-displayable.

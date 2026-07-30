@@ -121,6 +121,12 @@ No migration; `0003`'s policies already return the right rows.
 - [x] Buyer with a thread sees it in place of the compose box, sold items included
 - [x] Owner sees an "Interest in this item" panel listing everyone who asked
 
+## Phase 11 — Listings filter ✅
+- [x] All / Available / Sold tabs on the home grid — [components/ListingFilterTabs.tsx](components/ListingFilterTabs.tsx)
+- [x] Filter lives in `?status=`, applied in the query — `getListings(filter)` / `parseListingFilter()` in [lib/listings.ts](lib/listings.ts)
+- [x] Distinct empty states: an empty marketplace vs a filter that matches nothing
+- [x] Unit tests for the param parser — [lib/listings.test.ts](lib/listings.test.ts)
+
 ---
 
 ## Verification
@@ -129,7 +135,7 @@ No migration; `0003`'s policies already return the right rows.
 - [x] `npx tsc --noEmit` — passes
 - [x] `npm run lint` — passes
 - [x] `npm run build` — passes
-- [x] `npm test` — 31/31 passing ([format](lib/format.test.ts), [messages](lib/messages.test.ts))
+- [x] `npm test` — 38/38 passing ([format](lib/format.test.ts), [messages](lib/messages.test.ts), [listings](lib/listings.test.ts))
 
 ### Local (in progress) 🚧
 - [x] Admin logs in locally against the live Supabase project
