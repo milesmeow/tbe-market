@@ -18,6 +18,7 @@ function isPublic(pathname: string) {
  * Refreshes the Supabase session on every request and enforces access rules:
  *  - not logged in           -> /login
  *  - logged in, no profile   -> sign out (not a member)
+ *  - deactivated member      -> sign out
  *  - must change password    -> /auth/change-password
  *  - already logged in on /login -> home
  */
@@ -68,17 +69,36 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Logged in: confirm membership and password status.
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("must_change_password")
+    .select("must_change_password, deactivated_at")
     .eq("id", user.id)
     .maybeSingle();
+
+  if (profileError) {
+    // The query failed, which is a verdict about the database and not about this
+    // user — so deny access, but leave the session intact. Signing out here would
+    // turn any transient Supabase fault (or a schema/code version skew, e.g. this
+    // code deployed before the 0002 migration) into a full lockout that outlives
+    // the fault. Denying without signing out self-heals once the cause is fixed.
+    return isPublic(pathname) ? response : redirectTo("/login");
+  }
 
   if (!profile) {
     // Authenticated but not a marketplace member — deny and sign out.
     await supabase.auth.signOut();
     const redirect = redirectTo("/login");
     redirect.cookies.set("auth_error", "not_a_member", { maxAge: 30 });
+    return redirect;
+  }
+
+  if (profile.deactivated_at) {
+    // Deactivated mid-session. RLS already denies them everything, so this only
+    // decides *how* they find out: a bounce to /login rather than an app shell
+    // full of empty states. The login action explains why on their next attempt.
+    await supabase.auth.signOut();
+    const redirect = redirectTo("/login");
+    redirect.cookies.set("auth_error", "deactivated", { maxAge: 30 });
     return redirect;
   }
 

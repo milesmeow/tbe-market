@@ -18,6 +18,8 @@ export type Profile = {
   is_admin: boolean;
   must_change_password: boolean;
   created_at: string;
+  /** Set when the member is deactivated; null means active. See 0002 migration. */
+  deactivated_at: string | null;
 };
 
 export type Listing = {

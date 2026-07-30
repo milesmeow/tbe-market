@@ -1,10 +1,20 @@
 import { redirect } from "next/navigation";
 
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { createClient } from "@/lib/supabase/server";
 
+import { deleteMember, setMemberActive } from "./actions";
 import { InviteForm } from "./InviteForm";
 
 export const dynamic = "force-dynamic";
+
+/** Best available name for a member, for confirmation prompts. */
+function memberLabel(m: {
+  contact_email: string | null;
+  display_name: string | null;
+}): string {
+  return m.contact_email ?? m.display_name ?? "this member";
+}
 
 export default async function AdminInvitePage() {
   const supabase = await createClient();
@@ -23,7 +33,9 @@ export default async function AdminInvitePage() {
 
   const { data: members } = await supabase
     .from("profiles")
-    .select("id, display_name, contact_email, is_admin, must_change_password, created_at")
+    .select(
+      "id, display_name, contact_email, is_admin, must_change_password, created_at, deactivated_at",
+    )
     .order("created_at", { ascending: true });
 
   return (
@@ -44,6 +56,9 @@ export default async function AdminInvitePage() {
               <th className="px-4 py-2 font-medium">Name</th>
               <th className="px-4 py-2 font-medium">Email</th>
               <th className="px-4 py-2 font-medium">Status</th>
+              <th className="px-4 py-2 font-medium">
+                <span className="sr-only">Actions</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -61,7 +76,13 @@ export default async function AdminInvitePage() {
                   {m.contact_email ?? "—"}
                 </td>
                 <td className="px-4 py-2">
-                  {m.must_change_password ? (
+                  {/* Deactivation outranks the other states: it's the one that
+                      determines whether they can get in at all. */}
+                  {m.deactivated_at ? (
+                    <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+                      deactivated
+                    </span>
+                  ) : m.must_change_password ? (
                     <span className="rounded bg-amber-50 px-2 py-0.5 text-xs text-amber-700">
                       pending first login
                     </span>
@@ -69,6 +90,48 @@ export default async function AdminInvitePage() {
                     <span className="rounded bg-green-50 px-2 py-0.5 text-xs text-green-700">
                       active
                     </span>
+                  )}
+                </td>
+                <td className="px-4 py-2">
+                  {/* Admins are deliberately exempt from both actions — see
+                      deleteMember in ./actions.ts for why. */}
+                  {m.is_admin ? (
+                    <span className="text-xs text-slate-400">—</span>
+                  ) : (
+                    <div className="flex justify-end gap-2">
+                      <form action={setMemberActive}>
+                        <input type="hidden" name="memberId" value={m.id} />
+                        <input
+                          type="hidden"
+                          name="activate"
+                          value={m.deactivated_at ? "true" : "false"}
+                        />
+                        {m.deactivated_at ? (
+                          <button
+                            type="submit"
+                            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                          >
+                            Reactivate
+                          </button>
+                        ) : (
+                          <ConfirmButton
+                            message={`Deactivate ${memberLabel(m)}? They won't be able to sign in and their listings will be hidden. Nothing is deleted — you can reactivate them later.`}
+                            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                          >
+                            Deactivate
+                          </ConfirmButton>
+                        )}
+                      </form>
+                      <form action={deleteMember}>
+                        <input type="hidden" name="memberId" value={m.id} />
+                        <ConfirmButton
+                          message={`Remove ${memberLabel(m)}? Their listings and photos will be deleted too. This cannot be undone.`}
+                          className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
+                        >
+                          Remove
+                        </ConfirmButton>
+                      </form>
+                    </div>
                   )}
                 </td>
               </tr>
