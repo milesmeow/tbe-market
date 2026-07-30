@@ -14,20 +14,24 @@ Auth, Storage) · Resend (email) · Vercel (hosting). All free tier.
 
 ## Pick up here (handoff)
 
-**State as of 2026-07-28:** App is feature-complete for the MVP on branch `develop`.
-Invites now work **without email**: the admin invite screen shows the new member's
-sign-in details to copy and share by hand (Resend stays unconfigured for the testing
-phase). All automated checks pass (`tsc`, `lint`, `build`, `7/7` tests).
+**State as of 2026-07-30:** MVP is feature-complete and `release/1.0.1` is merged into
+both `main` and `develop`, so `main` now carries the app. Invites work **without email**:
+the admin invite screen shows the new member's sign-in details to copy and share by hand
+(Resend stays unconfigured for the testing phase). **In-app messaging (Phase 10) is built
+but not yet live** — its migration has not been applied. All automated checks pass
+(`tsc`, `lint`, `build`, `31/31` tests).
 
 **Blocked on James (not on code):**
 1. Turn **off** public signups in Supabase (Auth → Providers → Email) — do before inviting.
-2. Fast-forward `main` to `develop` and push (`git merge --ff-only develop`).
-3. Create the **Vercel** project (`vercel link`), add env vars, deploy, then set
-   `APP_URL` to the assigned domain and redeploy.
+2. **Run `0003_messaging.sql`** in the SQL editor. Until then `/messages` is empty and the
+   nav badge reads 0 — deliberately degraded rather than broken, but the feature is inert.
+3. Create the **Vercel** project, add env vars, deploy, then set `APP_URL` to the assigned
+   domain and redeploy.
 
-**Suggested next action for a fresh session:** once deployed, walk the End-to-end
-checklist below against the production URL — especially multi-photo iPhone uploads and
-the free / no-photo listing renders. Read [README.md](README.md) for setup and
+**Suggested next action for a fresh session:** apply `0003`, walk the messaging checks in
+Verification, then walk the End-to-end checklist against the production URL — especially
+multi-photo iPhone uploads and the free / no-photo listing renders. Read
+[README.md](README.md) for setup and
 [AGENTS.md](AGENTS.md) before touching Next.js code (this repo pins Next 16 with
 breaking changes vs. older docs).
 
@@ -94,6 +98,16 @@ breaking changes vs. older docs).
 - [x] Photos optional when posting
 - [x] "This item is free" checkbox → `price_cents = 0`, displays as "Free"
 
+## Phase 10 — In-app messaging 🚧
+Design: [docs/superpowers/specs/2026-07-30-in-app-messaging-design.md](docs/superpowers/specs/2026-07-30-in-app-messaging-design.md)
+- [x] Migration written: [`0003_messaging.sql`](supabase/migrations/0003_messaging.sql) — `message_threads`, `messages`, RLS, three `SECURITY DEFINER` functions
+- [ ] **Run `0003_messaging.sql`** in the SQL editor — required before this code runs
+- [x] Query layer [`lib/messages.ts`](lib/messages.ts) + [tests](lib/messages.test.ts)
+- [x] Compose form on the listing page — [components/MessageSellerForm.tsx](components/MessageSellerForm.tsx)
+- [x] Inbox at [`/messages`](<app/(app)/messages/page.tsx>), grouped by item, with a Sent section
+- [x] Unread badge in the authenticated nav
+- [x] `vitest.config.ts` so tests resolve the `@/*` path alias
+
 ---
 
 ## Verification
@@ -102,7 +116,7 @@ breaking changes vs. older docs).
 - [x] `npx tsc --noEmit` — passes
 - [x] `npm run lint` — passes
 - [x] `npm run build` — passes
-- [x] `npm test` — 7/7 passing ([lib/format.test.ts](lib/format.test.ts))
+- [x] `npm test` — 31/31 passing ([format](lib/format.test.ts), [messages](lib/messages.test.ts))
 
 ### Local (in progress) 🚧
 - [x] Admin logs in locally against the live Supabase project
@@ -117,6 +131,15 @@ breaking changes vs. older docs).
 - [ ] Owner edits, marks Sold (badge shows), deletes
 - [ ] RLS check: a member cannot edit/delete another member's listing
 - [ ] Repeat smoke test against the deployed Vercel URL
+
+**Messaging (Phase 10) — needs `0003` applied first:**
+- [ ] Member B messages A's item → A's nav badge reads 1
+- [ ] A opens `/messages`: message flagged **New**, with B's contact details; reload clears the badge
+- [ ] Owner sees no compose form on their own listing; sold listings show none either
+- [ ] RLS check: member C cannot read A and B's thread via PostgREST — the database refuses it
+- [ ] RLS check: a direct PostgREST `insert` into `messages` fails (no insert policy exists)
+- [ ] Deactivate B → the thread vanishes for A; reactivate → it returns intact
+- [ ] Remove a member → their threads and messages are gone
 
 ---
 
@@ -165,6 +188,25 @@ breaking changes vs. older docs).
   no password reset and no UI to grant `is_admin`, so removing the last admin would
   permanently orphan the community.
 
+- **2026-07-30 — In-app messaging, and why it isn't a privacy feature:** v1 deliberately
+  excluded messaging; this reverses that. The motivation is *trust* (conversations stay in
+  the community) and *convenience* (a form scoped to the item beats a blank `mailto:`),
+  **not** privacy — sellers' email and phone stay visible, so messaging is a third channel
+  rather than a replacement. Consequences: no email notification (Resend is off and its
+  sandbox sender only reaches the account owner), so an unread message waits until the
+  seller next visits — the compose form says so rather than implying instant delivery.
+  Schema is **thread-shaped though the UI is one-shot**, so adding replies later is
+  additive. Messages are **private to the two parties, admins included**: acting on an
+  abusive member (deactivate/remove) never requires reading their mail. All writes go
+  through `SECURITY DEFINER` functions with **no insert/update/delete policies at all**,
+  because RLS cannot restrict *which columns* an update touches — a policy loose enough to
+  let a recipient stamp `seller_read_at` would also let them rewrite `listing_id` or edit a
+  message sent to them.
+
 ## Out of scope (v1)
-Categories/tags, "reveal contact" gating, in-app messaging, private image bucket
-with signed URLs, Resend domain verification for production sending.
+Categories/tags, "reveal contact" gating, private image bucket with signed URLs,
+Resend domain verification for production sending.
+
+**Deliberately deferred within messaging (see Phase 10):** replies, email
+notification of new messages, admin visibility into messages, block/report, rate
+limiting, attachments, realtime.

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Gallery } from "@/components/Gallery";
+import { MessageSellerForm } from "@/components/MessageSellerForm";
 import { formatPrice } from "@/lib/format";
 import { getListing, imagePublicUrl, sortedImages } from "@/lib/listings";
 import { createClient } from "@/lib/supabase/server";
@@ -94,6 +95,16 @@ export default async function ListingDetailPage({
                 </p>
               )}
             </div>
+
+            {/* Hidden for the owner (messaging yourself) and on sold items. The
+                database refuses both cases too — this only avoids offering a
+                button that cannot work. */}
+            {!isOwner && !isSold && (
+              <MessageSellerForm
+                listingId={listing.id}
+                sellerName={seller?.display_name ?? "The seller"}
+              />
+            )}
           </div>
 
           {isOwner && (

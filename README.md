@@ -3,8 +3,8 @@
 An invite-only marketplace for a community. An admin invites members by email;
 each member gets a temporary password, must change it on first login, and can
 then post items for sale (title, description, price or **free**, with optional
-photos). Other members see the seller's contact info and arrange the sale
-off-platform.
+photos). Other members see the seller's contact info, or send them a message
+in the app, and arrange the sale off-platform.
 
 Built with **Next.js (App Router)**, **Supabase** (Postgres + Auth + Storage),
 **Resend** (email), and **Tailwind CSS**. Designed to run entirely on free tiers.
@@ -32,6 +32,13 @@ Built with **Next.js (App Router)**, **Supabase** (Postgres + Auth + Storage),
 - **Photos** — resized and compressed in the browser before upload, and iPhone
   **HEIC/HEIF converted to JPEG** automatically (see `lib/image.ts`). Keeps
   uploads small and web-displayable.
+- **Messaging** — a member can send a note about an item from the listing page,
+  and read what they've received at **/messages**, with an unread count in the
+  nav. It's an *additional* way to reach a seller: contact details stay visible,
+  and there's no reply box yet — the seller answers by email or phone. **There is
+  no email notification**, so a message waits until the seller next visits. See
+  [the design doc](docs/superpowers/specs/2026-07-30-in-app-messaging-design.md).
+  Messages are private to the two members; admins cannot read them.
 
 ## One-time setup
 
@@ -46,9 +53,11 @@ In the new project:
    [`0001_init.sql`](supabase/migrations/0001_init.sql) creates the tables, RLS
    policies, the `listing-images` storage bucket, and triggers;
    [`0002_member_deactivation.sql`](supabase/migrations/0002_member_deactivation.sql)
-   adds member deactivation. Both are idempotent, so re-running is safe. Apply
-   them **before** deploying app code that expects them — the app reads
-   `profiles.deactivated_at`, and Postgres rejects the query until it exists.
+   adds member deactivation;
+   [`0003_messaging.sql`](supabase/migrations/0003_messaging.sql) adds in-app
+   messaging. All are idempotent, so re-running is safe. Apply them **before**
+   deploying app code that expects them — the app reads `profiles.deactivated_at`,
+   and Postgres rejects the query until it exists.
 2. **Auth → Providers → Email** — turn **off** "Allow new users to sign up"
    (this app is invite-only).
 3. **Auth → SMTP** (optional but recommended) — set Resend's SMTP credentials so
@@ -135,18 +144,21 @@ app/
     page.tsx              Listings grid (home)
     listings/            Create / detail / edit + server actions
     profile/             Member profile (display name + contact info)
+    messages/            Inbox + send-message action
     admin/invite/        Admin-only member invite + list
 components/               Shared UI (cards, forms, gallery, buttons)
 lib/
   supabase/              Browser / server / admin clients + proxy session logic
   listings.ts            Listing queries + image URL helpers
+  messages.ts            Message queries, unread logic, inbox grouping
   image.ts               Browser-side photo compression + HEIC→JPEG conversion
-  format.ts              Price formatting/parsing (0 → "Free")
+  format.ts              Price/relative-time formatting (0 → "Free")
   config.ts              APP_NAME and other constants
   types.ts               Database types
+docs/superpowers/specs/   Design docs for larger features
 types/                    Ambient type declarations (e.g. heic2any)
 supabase/
-  migrations/0001_init.sql   Schema, RLS, storage, triggers
+  migrations/            0001 schema/RLS/storage, 0002 deactivation, 0003 messaging
   seed_admin.sql             Grant the first admin
 proxy.ts                  Session refresh + route protection (Next 16 "proxy")
 ```
@@ -162,5 +174,10 @@ proxy.ts                  Session refresh + route protection (Next 16 "proxy")
   is lazy-loaded only when an Apple photo is selected.
 - **Free items** are simply `price_cents = 0` — no separate column. The "free"
   checkbox is UI sugar and the price renders as "Free".
+- **Messages have no insert/update/delete RLS policies at all.** Every write goes
+  through a `SECURITY DEFINER` function (`send_listing_message`,
+  `mark_threads_read`), because RLS cannot restrict *which columns* an update
+  touches — a policy permissive enough to let a recipient mark a thread read would
+  also let them rewrite it. Messages are append-only as a result.
 - To rename the app, change `APP_NAME` in `lib/config.ts` or set
   `NEXT_PUBLIC_APP_NAME`.
