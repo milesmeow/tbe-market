@@ -14,20 +14,24 @@ Auth, Storage) · Resend (email) · Vercel (hosting). All free tier.
 
 ## Pick up here (handoff)
 
-**State as of 2026-07-28:** App is feature-complete for the MVP on branch `develop`.
-Invites now work **without email**: the admin invite screen shows the new member's
-sign-in details to copy and share by hand (Resend stays unconfigured for the testing
-phase). All automated checks pass (`tsc`, `lint`, `build`, `7/7` tests).
+**State as of 2026-07-30:** MVP is feature-complete and `release/1.0.1` is merged into
+both `main` and `develop`, so `main` now carries the app. Invites work **without email**:
+the admin invite screen shows the new member's sign-in details to copy and share by hand
+(Resend stays unconfigured for the testing phase). **In-app messaging (Phase 10) is built
+but not yet live** — its migration has not been applied. All automated checks pass
+(`tsc`, `lint`, `build`, `31/31` tests).
 
 **Blocked on James (not on code):**
 1. Turn **off** public signups in Supabase (Auth → Providers → Email) — do before inviting.
-2. Fast-forward `main` to `develop` and push (`git merge --ff-only develop`).
-3. Create the **Vercel** project (`vercel link`), add env vars, deploy, then set
-   `APP_URL` to the assigned domain and redeploy.
+2. **Run `0003_messaging.sql`** in the SQL editor. Until then `/messages` is empty and the
+   nav badge reads 0 — deliberately degraded rather than broken, but the feature is inert.
+3. Create the **Vercel** project, add env vars, deploy, then set `APP_URL` to the assigned
+   domain and redeploy.
 
-**Suggested next action for a fresh session:** once deployed, walk the End-to-end
-checklist below against the production URL — especially multi-photo iPhone uploads and
-the free / no-photo listing renders. Read [README.md](README.md) for setup and
+**Suggested next action for a fresh session:** apply `0003`, walk the messaging checks in
+Verification, then walk the End-to-end checklist against the production URL — especially
+multi-photo iPhone uploads and the free / no-photo listing renders. Read
+[README.md](README.md) for setup and
 [AGENTS.md](AGENTS.md) before touching Next.js code (this repo pins Next 16 with
 breaking changes vs. older docs).
 
@@ -94,6 +98,35 @@ breaking changes vs. older docs).
 - [x] Photos optional when posting
 - [x] "This item is free" checkbox → `price_cents = 0`, displays as "Free"
 
+## Phase 10 — In-app messaging 🚧
+Design: [docs/superpowers/specs/2026-07-30-in-app-messaging-design.md](docs/superpowers/specs/2026-07-30-in-app-messaging-design.md)
+- [x] Migration written: [`0003_messaging.sql`](supabase/migrations/0003_messaging.sql) — `message_threads`, `messages`, RLS, three `SECURITY DEFINER` functions
+- [ ] **Run `0003_messaging.sql`** in the SQL editor — required before this code runs
+- [x] Query layer [`lib/messages.ts`](lib/messages.ts) + [tests](lib/messages.test.ts)
+- [x] Compose form on the listing page — [components/MessageSellerForm.tsx](components/MessageSellerForm.tsx)
+- [x] Unread badge in the authenticated nav
+- [x] `vitest.config.ts` so tests resolve the `@/*` path alias
+
+### Phase 10b — Replies (two-way conversations)
+- [x] Migration written: [`0004_message_replies.sql`](supabase/migrations/0004_message_replies.sql) — `reply_to_thread()`, `mark_thread_read()`, listing FK `cascade` → `set null`
+- [ ] **Run `0004_message_replies.sql`** in the SQL editor
+- [x] Conversation list at [`/messages`](<app/(app)/messages/page.tsx>) — flat, both roles, newest first
+- [x] Thread page [`/messages/[id]`](<app/(app)/messages/[id]/page.tsx>) with full history + [reply box](components/ReplyForm.tsx)
+- [x] First message from a listing redirects into the new thread
+
+### Phase 10c — Conversations on the listing page
+No migration; `0003`'s policies already return the right rows.
+- [x] `getThreadsForListing()` — one query, no role argument (RLS discriminates)
+- [x] Shared [`ThreadRow`](components/ThreadRow.tsx) used by the list and both listing panels
+- [x] Buyer with a thread sees it in place of the compose box, sold items included
+- [x] Owner sees an "Interest in this item" panel listing everyone who asked
+
+## Phase 11 — Listings filter ✅
+- [x] All / Available / Sold tabs on the home grid — [components/ListingFilterTabs.tsx](components/ListingFilterTabs.tsx)
+- [x] Filter lives in `?status=`, applied in the query — `getListings(filter)` / `parseListingFilter()` in [lib/listings.ts](lib/listings.ts)
+- [x] Distinct empty states: an empty marketplace vs a filter that matches nothing
+- [x] Unit tests for the param parser — [lib/listings.test.ts](lib/listings.test.ts)
+
 ---
 
 ## Verification
@@ -102,7 +135,7 @@ breaking changes vs. older docs).
 - [x] `npx tsc --noEmit` — passes
 - [x] `npm run lint` — passes
 - [x] `npm run build` — passes
-- [x] `npm test` — 7/7 passing ([lib/format.test.ts](lib/format.test.ts))
+- [x] `npm test` — 38/38 passing ([format](lib/format.test.ts), [messages](lib/messages.test.ts), [listings](lib/listings.test.ts))
 
 ### Local (in progress) 🚧
 - [x] Admin logs in locally against the live Supabase project
@@ -117,6 +150,22 @@ breaking changes vs. older docs).
 - [ ] Owner edits, marks Sold (badge shows), deletes
 - [ ] RLS check: a member cannot edit/delete another member's listing
 - [ ] Repeat smoke test against the deployed Vercel URL
+
+**Messaging (Phase 10) — needs `0003` and `0004` applied first:**
+- [x] Member B messages A's item → A can read it
+- [ ] Sending redirects B into the new thread
+- [ ] A's nav badge reads 1; opening the thread clears it, and the list alone does *not*
+- [ ] A replies → B sees it, and A's own reply does not mark A's badge unread
+- [ ] Reply still works after A marks the item **sold**
+- [ ] Delete the listing → the conversation survives, showing "item no longer available"
+- [ ] Buyer revisiting an item they've messaged sees the conversation, not a blank compose box
+- [ ] Owner sees "Interest in this item" listing everyone who asked
+- [ ] A third member with no thread on that listing sees neither panel
+- [ ] Owner sees no compose form on their own listing; sold listings show none either
+- [ ] RLS check: member C cannot read A and B's thread via PostgREST — the database refuses it
+- [ ] RLS check: a direct PostgREST `insert` into `messages` fails (no insert policy exists)
+- [ ] Deactivate B → the thread vanishes for A; reactivate → it returns intact
+- [ ] Remove a member → their threads and messages are gone
 
 ---
 
@@ -165,6 +214,36 @@ breaking changes vs. older docs).
   no password reset and no UI to grant `is_admin`, so removing the last admin would
   permanently orphan the community.
 
+- **2026-07-30 — In-app messaging, and why it isn't a privacy feature:** v1 deliberately
+  excluded messaging; this reverses that. The motivation is *trust* (conversations stay in
+  the community) and *convenience* (a form scoped to the item beats a blank `mailto:`),
+  **not** privacy — sellers' email and phone stay visible, so messaging is a third channel
+  rather than a replacement. Consequences: no email notification (Resend is off and its
+  sandbox sender only reaches the account owner), so an unread message waits until the
+  seller next visits — the compose form says so rather than implying instant delivery.
+  Schema is **thread-shaped though the UI is one-shot**, so adding replies later is
+  additive. Messages are **private to the two parties, admins included**: acting on an
+  abusive member (deactivate/remove) never requires reading their mail. All writes go
+  through `SECURITY DEFINER` functions with **no insert/update/delete policies at all**,
+  because RLS cannot restrict *which columns* an update touches — a policy loose enough to
+  let a recipient stamp `seller_read_at` would also let them rewrite `listing_id` or edit a
+  message sent to them.
+
+- **2026-07-30 — Replies, and one schema reversal:** the inbox's Received/Sent split was
+  dropped for a single conversation list, because those labels describe who *started* a
+  thread — meaningless once both sides talk. Replies are allowed on **sold and deleted**
+  listings even though starting a thread still requires an active one: "sorry, it just sold"
+  is exactly the message needed after marking something sold. That forced reversing a
+  decision from `0003`: `message_threads.listing_id` cascaded on listing deletion, so
+  deleting an item destroyed the discussion about it. It is now `on delete set null`, and
+  the thread outlives the listing. `mark_threads_read()` was **dropped** rather than kept —
+  stamping every thread at once suited a list that showed whole conversations, but would
+  now clear New pills on threads never opened.
+
 ## Out of scope (v1)
-Categories/tags, "reveal contact" gating, in-app messaging, private image bucket
-with signed URLs, Resend domain verification for production sending.
+Categories/tags, "reveal contact" gating, private image bucket with signed URLs,
+Resend domain verification for production sending.
+
+**Deliberately deferred within messaging (see Phase 10):** email notification of new
+messages, admin visibility into messages, block/report, rate limiting, attachments,
+realtime. (Replies shipped in Phase 10b.)
