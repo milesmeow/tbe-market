@@ -61,7 +61,10 @@ In the new project:
    adds member deactivation;
    [`0003_messaging.sql`](supabase/migrations/0003_messaging.sql) adds in-app
    messaging; [`0004_message_replies.sql`](supabase/migrations/0004_message_replies.sql)
-   makes conversations two-way. All are idempotent, so re-running is safe. Apply them **before**
+   makes conversations two-way;
+   [`0005_keep_alive.sql`](supabase/migrations/0005_keep_alive.sql) adds the row the
+   daily keep-alive cron writes to.
+   All are idempotent, so re-running is safe. Apply them **before**
    deploying app code that expects them — the app reads `profiles.deactivated_at`,
    and Postgres rejects the query until it exists.
 2. **Auth → Providers → Email** — turn **off** "Allow new users to sign up"
@@ -133,12 +136,60 @@ npm run lint    # eslint
    `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
    `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_NAME`, `APP_URL`.
    `RESEND_API_KEY` / `EMAIL_FROM` are intentionally left unset (see Resend above).
+   Add `CRON_SECRET` too (see "Keeping Supabase awake" below).
 3. `APP_URL` needs the domain Vercel assigns, so deploy once, then set `APP_URL`
    to that URL (no trailing slash) and **redeploy** — env var changes don't apply
    to an existing deployment.
 4. Before inviting anyone, turn **off** public signups in Supabase
    (Auth → Providers → Email). The app is invite-only and nothing else blocks
    self-registration.
+5. Set `CRON_SECRET` and schedule the keep-alive ping (below).
+
+## Keeping Supabase awake
+
+Supabase pauses free-tier projects after about **7 days without database
+activity**. A quiet week is normal for a small community market, so
+`/api/cron/keep-alive` exists to bump a timestamp on a schedule. Hit it daily —
+the 7-day threshold then leaves several days of slack to notice a broken pinger
+before the project actually pauses.
+
+The ping calls `record_keep_alive_ping()`, which updates the single row in
+`keep_alive` (see [`0005_keep_alive.sql`](supabase/migrations/0005_keep_alive.sql)).
+A write rather than a read, for two reasons: there is then no question about
+whether the operation counts as activity, and `last_ping` is durable evidence
+the request actually reached Postgres. The table has **no write policy** — the
+`SECURITY DEFINER` function is the only way in, so the route runs on the anon
+key and never needs the service-role key.
+
+Generate a secret (`openssl rand -hex 32`), set it as `CRON_SECRET` in Vercel
+(Production, marked sensitive), and **redeploy** — environment changes don't
+apply to an existing deployment. The route returns **401** to anything without
+`Authorization: Bearer $CRON_SECRET`, and denies everything when the variable is
+unset, so a missing secret fails closed rather than leaving the endpoint open.
+
+Then schedule it with either (or both — the query is a read, so a duplicate ping
+is harmless):
+
+- **Vercel Cron** — already declared in `vercel.json`. Vercel sends the
+  `Authorization: Bearer $CRON_SECRET` header automatically, so there is nothing
+  else to configure. Hobby tier allows 2 cron jobs at a once-per-day maximum,
+  with best-effort timing.
+- **cron-job.org** — create a job for `https://<your-domain>/api/cron/keep-alive`,
+  daily, and add `Authorization: Bearer <secret>` under Advanced → Headers. Turn
+  on failure notifications. Runs independently of Vercel.
+
+**Verifying it works.** The ground truth is the table, not the scheduler's
+dashboard — run this in the Supabase SQL editor:
+
+```sql
+select last_ping, now() - last_ping as age from public.keep_alive;
+```
+
+`age` should be under a day. Nothing can fake this: the timestamp only moves if
+Postgres executed the write. A 200 from the scheduler, by contrast, proves less
+than it looks — the route sits behind `proxy.ts`, which matches `/api/*` and
+would bounce an unauthenticated request to `/login` (itself a 200) if the path
+weren't listed in `PUBLIC_PATHS`.
 
 ## Project structure
 
@@ -146,6 +197,7 @@ npm run lint    # eslint
 app/
   login/                  Sign-in page + action
   auth/change-password/   Forced first-login password change
+  api/cron/keep-alive/    Scheduled DB ping (stops Supabase pausing)
   (app)/                  Authenticated area (header/nav layout)
     page.tsx              Listings grid (home)
     listings/            Create / detail / edit + server actions
@@ -165,7 +217,7 @@ docs/superpowers/specs/   Design docs for larger features
 types/                    Ambient type declarations (e.g. heic2any)
 supabase/
   migrations/            0001 schema/RLS/storage, 0002 deactivation,
-                         0003 messaging, 0004 replies
+                         0003 messaging, 0004 replies, 0005 keep-alive
   seed_admin.sql             Grant the first admin
 proxy.ts                  Session refresh + route protection (Next 16 "proxy")
 ```
