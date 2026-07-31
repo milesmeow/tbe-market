@@ -63,6 +63,15 @@ export type MessageThread = {
   seller_read_at: string | null;
 };
 
+/**
+ * Single row (`id` is always 1) whose timestamp the daily cron bumps to keep
+ * Supabase from pausing the project. See supabase/migrations/0005_keep_alive.sql.
+ */
+export type KeepAlive = {
+  id: number;
+  last_ping: string;
+};
+
 /** Append-only: there is no update or delete path for messages anywhere. */
 export type Message = {
   id: string;
@@ -134,6 +143,14 @@ export interface Database {
         Update: never;
         Relationships: [];
       };
+      // Singleton row bumped by the daily keep-alive cron. Same arrangement as
+      // the message tables: select-only, written solely by an RPC.
+      keep_alive: {
+        Row: KeepAlive;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -154,6 +171,15 @@ export interface Database {
       mark_thread_read: { Args: { p_thread_id: string }; Returns: undefined };
       /** Threads with activity the caller hasn't seen — powers the nav badge. */
       unread_thread_count: { Args: Record<string, never>; Returns: number };
+      /**
+       * Bumps the keep-alive row so Supabase sees database activity and doesn't
+       * pause the project. Returns the new timestamp. Callable by anon — the
+       * cron route has no session.
+       */
+      record_keep_alive_ping: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
     };
     Enums: { listing_status: ListingStatus };
     CompositeTypes: Record<string, never>;

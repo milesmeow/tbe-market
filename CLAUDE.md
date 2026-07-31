@@ -46,6 +46,19 @@ than duplicating setup steps here.
 - **Four-gate access**, enforced in `proxy.ts` **and re-checked in pages**: (1) logged
   in, (2) has a `profiles` row (= is a member), (3) not deactivated
   (`profiles.deactivated_at is null`), (4) completed first-login password change.
+- **`/api/cron/keep-alive` is the only route reachable without a session**, and
+  `CRON_SECRET` is its entire authorization — a bearer-token compare in `lib/cron.ts`
+  that **fails closed** when the variable is unset. It exists because Supabase pauses
+  free projects after ~7 days of database inactivity. Two things are load-bearing and
+  easy to break: it must stay listed in `PUBLIC_PATHS` (`lib/supabase/middleware.ts`),
+  or the proxy's `/api/*` matcher redirects it to `/login` and it never reaches the
+  database *while still returning 200 to the scheduler*; and it must keep returning
+  non-2xx on a query error, or the scheduler's failure alerting is decorative. It writes
+  via `record_keep_alive_ping()` (SECURITY DEFINER, granted to `anon`) rather than reading,
+  so there's no question whether the operation counts as activity and `keep_alive.last_ping`
+  is durable proof the request reached Postgres. It uses the **anon** client deliberately —
+  an endpoint reachable without a session must not hold one that bypasses RLS, and the
+  definer function means it doesn't need to.
 - **Ownership is enforced by Supabase Row Level Security, not just the UI** — never rely
   on UI checks alone. `is_member()` (SECURITY DEFINER) gates reads; owners write only
   their own rows. Trigger `prevent_admin_escalation` blocks self-granting `is_admin`.
@@ -57,9 +70,9 @@ than duplicating setup steps here.
   expose to the client). Actions using it **bypass RLS**, so their own `callerAdminId()`
   check is the entire authorization boundary — hiding a button is not a control.
 - Schema source of truth: `supabase/migrations/` — `0001_init.sql`, `0002_member_deactivation.sql`,
-  `0003_messaging.sql`, `0004_message_replies.sql`, applied **manually and in order** in the
-  Supabase SQL editor; TS mirror `lib/types.ts`. Tables: `profiles`, `listings`,
-  `listing_images`, `message_threads`, `messages`.
+  `0003_messaging.sql`, `0004_message_replies.sql`, `0005_keep_alive.sql`, applied **manually
+  and in order** in the Supabase SQL editor; TS mirror `lib/types.ts`. Tables: `profiles`,
+  `listings`, `listing_images`, `message_threads`, `messages`, `keep_alive`.
   Storage bucket `listing-images` is **public read**, member-only insert, owner-only delete.
 - **The message tables have no write policies at all** — RLS grants `select` and nothing
   else, and `send_listing_message` / `reply_to_thread` / `mark_thread_read` (SECURITY
@@ -108,15 +121,16 @@ than duplicating setup steps here.
 
 ## Directory map
 
-- `app/` — App Router. `login/`, `auth/change-password/`, and the authenticated `(app)/`
-  group (`listings/`, `profile/`, `messages/`, `admin/invite/`, shared `layout.tsx` +
-  `actions.ts`).
+- `app/` — App Router. `login/`, `auth/change-password/`, `api/cron/keep-alive/`, and the
+  authenticated `(app)/` group (`listings/`, `profile/`, `messages/`, `admin/invite/`,
+  shared `layout.tsx` + `actions.ts`).
 - `components/` — shared UI (`ListingCard`, `ListingForm`, `Gallery`, `ConfirmButton`,
   `MessageSellerForm`, `ReplyForm`, `ThreadRow`, `ui`).
 - `lib/` — `supabase/` clients + `middleware.ts`, `listings.ts`, `messages.ts`, `image.ts`,
-  `format.ts`, `config.ts`, `types.ts`.
+  `format.ts`, `config.ts`, `cron.ts`, `types.ts`.
 - `supabase/` — `migrations/` (`0001_init.sql`, `0002_member_deactivation.sql`,
-  `0003_messaging.sql`, `0004_message_replies.sql`), `seed_admin.sql`. `types/` — ambient decls.
+  `0003_messaging.sql`, `0004_message_replies.sql`, `0005_keep_alive.sql`), `seed_admin.sql`.
+  `types/` — ambient decls.
 - `docs/superpowers/specs/` — design docs for larger features.
 
 ## Git

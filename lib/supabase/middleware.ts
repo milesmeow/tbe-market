@@ -3,8 +3,15 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import type { Database } from "@/lib/types";
 
-/** Paths reachable without being logged in. */
-const PUBLIC_PATHS = ["/login", "/auth/callback"];
+/**
+ * Paths reachable without being logged in.
+ *
+ * `/api/cron/keep-alive` is listed as an exact path rather than `/api/cron`,
+ * because `isPublic()` also prefix-matches: the shorter entry would quietly make
+ * every future route in that namespace public. It is the only unauthenticated
+ * route in the app, and `CRON_SECRET` is the entire control on it.
+ */
+const PUBLIC_PATHS = ["/login", "/auth/callback", "/api/cron/keep-alive"];
 
 const CHANGE_PASSWORD_PATH = "/auth/change-password";
 
