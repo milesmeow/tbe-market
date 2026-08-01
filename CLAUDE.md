@@ -117,6 +117,16 @@ than duplicating setup steps here.
   Server Actions so RLS applies. Max **5 photos/listing** (`MAX_IMAGES_PER_LISTING` in
   `lib/config.ts`).
 - Photos are optional — grid/detail show a "No photo" placeholder.
+- **The home grid's filter and sort live in the URL, not in component state** —
+  `?status=` and `?sort=`, both parsed leniently (an unrecognised value falls back to
+  the default rather than erroring or showing an empty grid). Every link that lands on
+  the home page must go through **`listingsHref(filter, sort)`**: the two tab groups each
+  have to preserve the other's choice, and a hand-written `/` or `?status=sold` silently
+  resets the one it doesn't mention. Defaults are omitted from the query string so the
+  default view has a single canonical URL.
+- **`sort` only flips the `created_at` direction — `status` stays the primary sort key.**
+  "Oldest" means the oldest *available* items first; sorting sold listings to the top of
+  a marketplace would be a strange thing to offer.
 - Rebrand via `APP_NAME` in `lib/config.ts` (or `NEXT_PUBLIC_APP_NAME`).
 
 ## Mobile-first UI
@@ -167,7 +177,8 @@ phone-shaped task. **The 375px phone is the design target; desktop is the enhanc
   authenticated `(app)/` group (`listings/`, `profile/`, `messages/`, `admin/invite/`,
   shared `layout.tsx` + `actions.ts`).
 - `components/` — shared UI (`ListingCard`, `ListingForm`, `Gallery`, `ConfirmButton`,
-  `MessageSellerForm`, `ReplyForm`, `ThreadRow`, `MobileNav`, `UnreadBadge`, `ui`).
+  `MessageSellerForm`, `ReplyForm`, `ThreadRow`, `MobileNav`, `UnreadBadge`,
+  `SegmentedTabs` + its two users `ListingFilterTabs`/`ListingSortTabs`, `ui`).
 - `lib/` — `supabase/` clients + `middleware.ts`, `listings.ts`, `messages.ts`, `image.ts`,
   `format.ts`, `config.ts`, `cron.ts`, `types.ts`.
 - `supabase/` — `migrations/` (`0001_init.sql`, `0002_member_deactivation.sql`,

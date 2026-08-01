@@ -15,6 +15,9 @@ const LISTING_SELECT =
 /** Which listings the home grid is showing. */
 export type ListingFilter = "all" | "available" | "sold";
 
+/** Which end of the list the home grid starts from. */
+export type ListingSort = "newest" | "oldest";
+
 /**
  * Read the `?status=` search param, falling back to "all".
  *
@@ -28,17 +31,45 @@ export function parseListingFilter(
   return raw === "available" || raw === "sold" ? raw : "all";
 }
 
+/** Read the `?sort=` search param, falling back to "newest". Same leniency. */
+export function parseListingSort(
+  value: string | string[] | undefined,
+): ListingSort {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return raw === "oldest" ? "oldest" : "newest";
+}
+
 /**
- * Listings for the marketplace home, active first then sold, newest first.
+ * Canonical home URL for a filter + sort pair.
+ *
+ * Both controls have to preserve the other's choice, so neither can hardcode its
+ * hrefs. Defaults are omitted rather than spelled out, which keeps one URL for
+ * the default view — the reason "All" was `/` and not `?status=all` to begin with.
+ */
+export function listingsHref(filter: ListingFilter, sort: ListingSort): string {
+  const params = new URLSearchParams();
+  if (filter !== "all") params.set("status", filter);
+  if (sort !== "newest") params.set("sort", sort);
+  const query = params.toString();
+  return query ? `/?${query}` : "/";
+}
+
+/**
+ * Listings for the marketplace home, active first then sold, then by age.
  *
  * Filtering happens in the query rather than in the page so a busy marketplace
  * doesn't ship rows it won't render. Note the vocabulary gap: the UI says
  * "Available" because that's what a member cares about, while the column value
  * is `active` — `status` is also what makes a listing messageable, not just
  * visible.
+ *
+ * `sort` only flips the `created_at` direction: status stays the primary key in
+ * both directions, so "Oldest" means the oldest *available* items first rather
+ * than surfacing a wall of long-sold ones.
  */
 export async function getListings(
   filter: ListingFilter = "all",
+  sort: ListingSort = "newest",
 ): Promise<ListingWithDetails[]> {
   const supabase = await createClient();
 
@@ -49,7 +80,7 @@ export async function getListings(
 
   const { data, error } = await query
     .order("status", { ascending: true }) // 'active' < 'sold'
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: sort === "oldest" });
 
   if (error) throw error;
   return (data ?? []) as unknown as ListingWithDetails[];

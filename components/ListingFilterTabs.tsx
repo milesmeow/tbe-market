@@ -1,44 +1,34 @@
-import Link from "next/link";
+import { SegmentedTabs } from "@/components/SegmentedTabs";
+import { listingsHref } from "@/lib/listings";
+import type { ListingFilter, ListingSort } from "@/lib/listings";
 
-import type { ListingFilter } from "@/lib/listings";
-
-const TABS: { value: ListingFilter; label: string; href: string }[] = [
-  { value: "all", label: "All", href: "/" },
-  { value: "available", label: "Available", href: "/?status=available" },
-  { value: "sold", label: "Sold", href: "/?status=sold" },
+const FILTERS: { value: ListingFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "available", label: "Available" },
+  { value: "sold", label: "Sold" },
 ];
 
 /**
  * Status filter for the home grid.
  *
- * Plain links over a client component with state: the filter lives in the URL, so
- * a filtered view can be shared, bookmarked and reached by the back button, and
- * the page stays entirely server-rendered. "All" is the bare path rather than
- * `?status=all`, so the default view has one canonical URL.
+ * Takes the current `sort` so switching filter keeps the member's chosen order —
+ * `listingsHref` is what keeps the two controls from clobbering each other.
  */
-export function ListingFilterTabs({ active }: { active: ListingFilter }) {
+export function ListingFilterTabs({
+  active,
+  sort,
+}: {
+  active: ListingFilter;
+  sort: ListingSort;
+}) {
   return (
-    <nav
-      aria-label="Filter items by status"
-      className="inline-flex rounded-lg border border-slate-200 bg-white p-1"
-    >
-      {TABS.map((tab) => {
-        const isActive = tab.value === active;
-        return (
-          <Link
-            key={tab.value}
-            href={tab.href}
-            aria-current={isActive ? "page" : undefined}
-            className={`inline-flex min-h-11 touch-manipulation items-center justify-center rounded-md px-3 text-sm font-medium ${
-              isActive
-                ? "bg-slate-900 text-white"
-                : "text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            {tab.label}
-          </Link>
-        );
-      })}
-    </nav>
+    <SegmentedTabs
+      label="Filter items by status"
+      active={active}
+      options={FILTERS.map((filter) => ({
+        ...filter,
+        href: listingsHref(filter.value, sort),
+      }))}
+    />
   );
 }
