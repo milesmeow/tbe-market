@@ -117,7 +117,59 @@ than duplicating setup steps here.
   Server Actions so RLS applies. Max **5 photos/listing** (`MAX_IMAGES_PER_LISTING` in
   `lib/config.ts`).
 - Photos are optional — grid/detail show a "No photo" placeholder.
+- **The home grid's filter and sort live in the URL, not in component state** —
+  `?status=` and `?sort=`, both parsed leniently (an unrecognised value falls back to
+  the default rather than erroring or showing an empty grid). Every link that lands on
+  the home page must go through **`listingsHref(filter, sort)`**: the two tab groups each
+  have to preserve the other's choice, and a hand-written `/` or `?status=sold` silently
+  resets the one it doesn't mention. Defaults are omitted from the query string so the
+  default view has a single canonical URL.
+- **`sort` only flips the `created_at` direction — `status` stays the primary sort key.**
+  "Oldest" means the oldest *available* items first; sorting sold listings to the top of
+  a marketplace would be a strange thing to offer.
 - Rebrand via `APP_NAME` in `lib/config.ts` (or `NEXT_PUBLIC_APP_NAME`).
+
+## Mobile-first UI
+
+Members browse and post from their phones — photographing an item and listing it is a
+phone-shaped task. **The 375px phone is the design target; desktop is the enhancement.**
+
+- **Write the phone layout in unprefixed utilities, then scale up with `sm:`/`md:`/`lg:`.**
+  Never build a desktop layout and patch it with `max-*` overrides. If a component has no
+  breakpoint variants at all, that's fine only when the phone layout already *is* the
+  desktop one.
+- **Interactive elements need a ≥44px touch target.** The shared classes in
+  `components/ui.tsx` (`inputClass`, `primaryButtonClass`, `secondaryButtonClass`,
+  `smallButtonClass`, `navLinkClass`) all carry `min-h-11` — use them rather than
+  hand-rolling, and don't shrink them at the call site with `py-1`/`py-1.5`. A 16px
+  checkbox is fine visually as long as its `<label>` wrapper is the real target.
+- **Never put a `<table>` in front of a phone.** Tables are `hidden md:block` with a
+  stacked card list below — `app/(app)/admin/invite/page.tsx` is the reference. A table
+  wrapper clips with `overflow-x-auto`, **never** `overflow-hidden` (that hides the row
+  actions instead of letting you reach them).
+- **User-supplied strings wrap.** Emails, phone numbers, and message bodies need explicit
+  `break-words` (or `break-all` for addresses) — `whitespace-pre-wrap` alone will not
+  break a long URL, and one long address overflows a card at 375px. `globals.css` sets
+  `overflow-wrap: anywhere` as a global backstop; don't rely on it inside cards.
+- **Inputs stay at ≥16px font size.** `text-sm` on an `<input>`/`<textarea>` makes iOS
+  Safari zoom the page on focus. Labels and helper text may be `text-sm`; the field itself
+  may not.
+- **Mobile keyboard hints are part of the field definition** — `type`, `inputMode`,
+  `autoComplete`, and `autoCapitalize="none"` on email fields (iOS capitalizes the first
+  letter otherwise). Price is `type="text" inputMode="decimal"` **deliberately** — don't
+  "fix" it to `type="number"`, which brings back spinners and scroll-wheel edits.
+- **Fixed or sticky bottom UI respects the iOS home indicator** — use the `pb-safe`
+  helper in `globals.css`. The root layout sets `viewportFit: "cover"`, which is what makes
+  `env(safe-area-inset-*)` non-zero.
+- **`maximumScale` / `userScalable: false` are off the table** — blocking pinch-zoom is an
+  accessibility regression, not a polish item.
+- **The header is two implementations of one nav.** `components/MobileNav.tsx` (drawer,
+  `sm:hidden`) and the inline cluster in `app/(app)/layout.tsx` (`hidden sm:flex`) must
+  both render the unread badge — that's why it lives in `components/UnreadBadge.tsx`
+  rather than inline. Add a nav item to both or to neither.
+- **Verify at 375px before calling a UI change done**, and confirm
+  `document.documentElement.scrollWidth > window.innerWidth` is `false` — horizontal page
+  scroll is the failure this checklist exists to prevent.
 
 ## Directory map
 
@@ -125,7 +177,8 @@ than duplicating setup steps here.
   authenticated `(app)/` group (`listings/`, `profile/`, `messages/`, `admin/invite/`,
   shared `layout.tsx` + `actions.ts`).
 - `components/` — shared UI (`ListingCard`, `ListingForm`, `Gallery`, `ConfirmButton`,
-  `MessageSellerForm`, `ReplyForm`, `ThreadRow`, `ui`).
+  `MessageSellerForm`, `ReplyForm`, `ThreadRow`, `MobileNav`, `UnreadBadge`,
+  `SegmentedTabs` + its two users `ListingFilterTabs`/`ListingSortTabs`, `ui`).
 - `lib/` — `supabase/` clients + `middleware.ts`, `listings.ts`, `messages.ts`, `image.ts`,
   `format.ts`, `config.ts`, `cron.ts`, `types.ts`.
 - `supabase/` — `migrations/` (`0001_init.sql`, `0002_member_deactivation.sql`,

@@ -7,7 +7,8 @@ import {
   SubmitButton,
   inputClass,
   labelClass,
-  secondaryButtonClass,
+  primaryButtonClass,
+  smallButtonClass,
 } from "@/components/ui";
 
 import {
@@ -78,7 +79,7 @@ function CopyButton({
           setTimeout(() => setCopied(false), 2000);
         }
       }}
-      className={`${secondaryButtonClass} px-3 py-1 text-sm`}
+      className={`flex-1 sm:flex-none ${smallButtonClass}`}
     >
       {copied ? "Copied" : label}
     </button>
@@ -107,15 +108,15 @@ function CredentialsBlock({ credentials }: { credentials: InviteCredentials }) {
       </p>
       <dl className="space-y-1 text-slate-700">
         <div className="flex gap-2">
-          <dt className="w-20 shrink-0 text-slate-500">Sign in</dt>
+          <dt className="w-16 shrink-0 text-slate-500 sm:w-20">Sign in</dt>
           <dd className="break-all select-all">{loginUrl}</dd>
         </div>
         <div className="flex gap-2">
-          <dt className="w-20 shrink-0 text-slate-500">Email</dt>
+          <dt className="w-16 shrink-0 text-slate-500 sm:w-20">Email</dt>
           <dd className="break-all select-all">{email}</dd>
         </div>
         <div className="flex gap-2">
-          <dt className="w-20 shrink-0 text-slate-500">Password</dt>
+          <dt className="w-16 shrink-0 text-slate-500 sm:w-20">Password</dt>
           <dd>
             <code className="select-all rounded bg-white px-1.5 py-0.5 font-mono text-slate-900">
               {tempPassword}
@@ -165,6 +166,11 @@ export function InviteForm() {
           name="email"
           type="email"
           required
+          inputMode="email"
+          autoComplete="off"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
           placeholder="person@example.com"
           className={inputClass}
         />
@@ -180,7 +186,12 @@ export function InviteForm() {
         <CredentialsBlock credentials={state.credentials} />
       )}
 
-      <SubmitButton pendingText="Inviting…">Send invite</SubmitButton>
+      <SubmitButton
+        pendingText="Inviting…"
+        className={`w-full sm:w-auto ${primaryButtonClass}`}
+      >
+        Send invite
+      </SubmitButton>
     </form>
   );
 }

@@ -54,7 +54,7 @@ export default async function ThreadPage({
           <div className="flex flex-wrap items-baseline gap-2">
             <Link
               href={`/listings/${thread.listing.id}`}
-              className="font-semibold text-slate-900 hover:underline"
+              className="min-w-0 break-words font-semibold text-slate-900 hover:underline"
             >
               {thread.listing.title}
             </Link>
@@ -82,7 +82,7 @@ export default async function ThreadPage({
             {other?.contact_email && (
               <a
                 href={`mailto:${other.contact_email}`}
-                className="text-slate-500 underline hover:text-slate-700"
+                className="break-all text-slate-500 underline hover:text-slate-700"
               >
                 {other.contact_email}
               </a>
@@ -90,7 +90,7 @@ export default async function ThreadPage({
             {other?.contact_phone && (
               <a
                 href={`tel:${other.contact_phone}`}
-                className="text-slate-500 underline hover:text-slate-700"
+                className="break-all text-slate-500 underline hover:text-slate-700"
               >
                 {other.contact_phone}
               </a>
@@ -107,7 +107,7 @@ export default async function ThreadPage({
               key={message.id}
               className={mine ? "flex justify-end" : "flex justify-start"}
             >
-              <div className="max-w-[85%]">
+              <div className="min-w-0 max-w-[85%]">
                 <div
                   className={
                     mine
@@ -115,7 +115,12 @@ export default async function ThreadPage({
                       : "rounded-2xl rounded-bl-sm border border-slate-200 bg-white px-4 py-2 text-sm text-slate-800"
                   }
                 >
-                  <p className="whitespace-pre-wrap">{message.body}</p>
+                  {/* break-words as well as whitespace-pre-wrap: the latter
+                      preserves the member's line breaks but will not break a
+                      pasted URL, which then blows past max-w-[85%]. */}
+                  <p className="whitespace-pre-wrap break-words">
+                    {message.body}
+                  </p>
                 </div>
                 <p
                   className={`mt-1 text-[11px] text-slate-400 ${

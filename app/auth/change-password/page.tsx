@@ -7,6 +7,7 @@ import {
   SubmitButton,
   inputClass,
   labelClass,
+  primaryButtonClass,
 } from "@/components/ui";
 
 import {
@@ -21,8 +22,8 @@ export default function ChangePasswordPage() {
   );
 
   return (
-    <main className="flex flex-1 items-center justify-center px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+    <main className="flex flex-1 items-center justify-center px-4 py-8">
+      <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <h1 className="text-xl font-semibold text-slate-900">
           Set a new password
         </h1>
@@ -64,7 +65,7 @@ export default function ChangePasswordPage() {
 
           <SubmitButton
             pendingText="Saving…"
-            className="w-full rounded-lg bg-slate-900 px-4 py-2 font-medium text-white shadow-sm transition hover:bg-slate-700 disabled:opacity-50"
+            className={`w-full ${primaryButtonClass}`}
           >
             Save password
           </SubmitButton>

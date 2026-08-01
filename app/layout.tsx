@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Fraunces } from "next/font/google";
 import "./globals.css";
 import { Footer } from "@/components/Footer";
@@ -24,6 +24,17 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   title: APP_NAME,
   description: `${APP_NAME} — a community marketplace.`,
+};
+
+// `viewportFit: "cover"` is what makes env(safe-area-inset-*) non-zero — without
+// it the `pb-safe` helper in globals.css silently resolves to 0 on iPhones.
+// Deliberately no `maximumScale`/`userScalable`: blocking pinch-zoom would be an
+// accessibility regression, and the default (scalable) is what we want.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#faf8f4", // matches --background in globals.css
 };
 
 export default function RootLayout({
