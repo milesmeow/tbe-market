@@ -22,10 +22,10 @@ export default async function ProfilePage() {
   return (
     <div className="mx-auto max-w-lg">
       <h1 className="mb-1 text-xl font-semibold text-slate-900">Your profile</h1>
-      <p className="mb-4 text-sm text-slate-500">
+      <p className="mb-4 break-all text-sm text-slate-500">
         Signed in as {user.email}
       </p>
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <ProfileForm
           defaults={{
             display_name: profile?.display_name ?? "",

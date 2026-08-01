@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { ListingForm } from "@/components/ListingForm";
+import { smallButtonClass } from "@/components/ui";
 import { getListing, imagePublicUrl, sortedImages } from "@/lib/listings";
 import { createClient } from "@/lib/supabase/server";
 
@@ -56,10 +57,7 @@ export default async function EditListingPage({
             name="status"
             value={isSold ? "active" : "sold"}
           />
-          <button
-            type="submit"
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
+          <button type="submit" className={smallButtonClass}>
             {isSold ? "Mark as available" : "Mark as sold"}
           </button>
         </form>
@@ -69,11 +67,13 @@ export default async function EditListingPage({
             {isSold ? "Sold" : "Available"}
           </span>
         </span>
-        <form action={deleteListing} className="ml-auto">
+        {/* sm:ml-auto only: once the row wraps on a phone, `ml-auto` would strand
+            Delete alone on a right-aligned line. */}
+        <form action={deleteListing} className="sm:ml-auto">
           <input type="hidden" name="id" value={id} />
           <ConfirmButton
             message="Delete this listing and its photos? This cannot be undone."
-            className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
+            className={`${smallButtonClass} border-red-200 text-red-600 hover:bg-red-50`}
           >
             Delete listing
           </ConfirmButton>
@@ -86,7 +86,7 @@ export default async function EditListingPage({
           <p className="mb-2 text-sm font-medium text-slate-700">
             Current photos
           </p>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-4">
             {images.map((img) => (
               <div key={img.id} className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -95,14 +95,22 @@ export default async function EditListingPage({
                   alt="listing photo"
                   className="h-24 w-24 rounded-lg border border-slate-200 object-cover"
                 />
-                <form action={deleteListingImage} className="absolute right-1 top-1">
+                {/* The visible dot is 28px but the button is a 44px square
+                    hanging off the corner — a 24px target on a thumbnail is a
+                    reliable mis-tap. */}
+                <form
+                  action={deleteListingImage}
+                  className="absolute -right-2 -top-2 z-10"
+                >
                   <input type="hidden" name="imageId" value={img.id} />
                   <input type="hidden" name="listingId" value={id} />
                   <ConfirmButton
                     message="Remove this photo?"
-                    className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900/80 text-xs text-white hover:bg-slate-900"
+                    className="flex h-11 w-11 touch-manipulation items-center justify-center"
                   >
-                    ✕
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/85 text-xs text-white shadow-sm">
+                      ✕
+                    </span>
                   </ConfirmButton>
                 </form>
               </div>
@@ -112,7 +120,7 @@ export default async function EditListingPage({
       )}
 
       {/* Details form (photos optional here — adds more) */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <ListingForm
           action={updateListing}
           submitLabel="Save changes"
