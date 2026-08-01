@@ -2,6 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { MobileNav } from "@/components/MobileNav";
+import { UnreadBadge } from "@/components/UnreadBadge";
+import { navLinkClass } from "@/components/ui";
 import { APP_NAME } from "@/lib/config";
 import { unreadThreadCount } from "@/lib/messages";
 import { createClient } from "@/lib/supabase/server";
@@ -41,69 +44,69 @@ export default async function AppLayout({
     // flex-1, not min-h-screen: claims the space left over by the root layout's
     // footer instead of demanding a full viewport and pushing it below the fold.
     <div className="flex-1">
-      <header className="border-b border-slate-200 bg-white">
-        <nav className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
-          <Link href="/" className="flex items-center gap-2.5">
+      {/* `relative` anchors MobileNav's dropdown panel, which drops from
+          `top-full` of the whole header rather than of the button. */}
+      <header className="relative border-b border-slate-200 bg-white">
+        <nav className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-2 sm:gap-4 sm:py-3">
+          {/* min-w-0 + truncate: without them the brand refuses to shrink and
+              pushes the nav past a 375px viewport. */}
+          <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-2.5">
             <Image
               src="/tbe-logo.png"
               alt="Temple Beth El"
               width={36}
               height={36}
-              className="h-9 w-9"
+              className="h-8 w-8 shrink-0 sm:h-9 sm:w-9"
               priority
             />
-            <span className="font-serif text-xl font-semibold tracking-tight text-slate-900">
+            <span className="truncate font-serif text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">
               {APP_NAME}
             </span>
           </Link>
-          <div className="flex items-center gap-2 text-sm">
+
+          <div className="flex shrink-0 items-center gap-1 text-sm sm:gap-2">
+            {/* Posting is the primary action, so it stays in the bar at every
+                width — only its label shortens. */}
             <Link
               href="/listings/new"
-              className="rounded-lg bg-gold-500 px-3 py-1.5 font-medium text-slate-900 shadow-sm transition hover:bg-gold-400"
+              className="inline-flex min-h-11 touch-manipulation items-center rounded-lg bg-gold-500 px-3 font-medium text-slate-900 shadow-sm transition hover:bg-gold-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-300"
             >
-              + Post item
+              <span className="sm:hidden">+ Post</span>
+              <span className="hidden sm:inline">+ Post item</span>
             </Link>
-            <Link
-              href="/messages"
-              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-slate-600 hover:bg-slate-100"
-            >
-              Messages
-              {unread > 0 && (
-                <span
-                  aria-label={`${unread} unread`}
-                  className="inline-flex min-w-5 items-center justify-center rounded-full bg-gold-500 px-1.5 text-xs font-semibold text-slate-900"
-                >
-                  {unread}
-                </span>
-              )}
-            </Link>
-            <Link
-              href="/profile"
-              className="rounded-lg px-3 py-1.5 text-slate-600 hover:bg-slate-100"
-            >
-              Profile
-            </Link>
-            {profile.is_admin && (
-              <Link
-                href="/admin/invite"
-                className="rounded-lg px-3 py-1.5 text-slate-600 hover:bg-slate-100"
-              >
-                Members
+
+            {/* Desktop cluster. Its mobile counterpart is <MobileNav> below —
+                any nav item added here needs adding there too. */}
+            <div className="hidden items-center gap-2 sm:flex">
+              <Link href="/messages" className={navLinkClass}>
+                Messages
+                <UnreadBadge count={unread} />
               </Link>
-            )}
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="rounded-lg px-3 py-1.5 text-slate-600 hover:bg-slate-100"
-              >
-                Sign out
-              </button>
-            </form>
+              <Link href="/profile" className={navLinkClass}>
+                Profile
+              </Link>
+              {profile.is_admin && (
+                <Link href="/admin/invite" className={navLinkClass}>
+                  Members
+                </Link>
+              )}
+              <form action={signOut}>
+                <button type="submit" className={navLinkClass}>
+                  Sign out
+                </button>
+              </form>
+            </div>
+
+            <MobileNav
+              isAdmin={!!profile.is_admin}
+              unread={unread}
+              signOut={signOut}
+            />
           </div>
         </nav>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
+      <main className="mx-auto max-w-5xl px-4 py-4 sm:py-6">{children}</main>
     </div>
   );
 }

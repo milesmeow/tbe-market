@@ -9,6 +9,7 @@ import {
   SubmitButton,
   inputClass,
   labelClass,
+  primaryButtonClass,
 } from "@/components/ui";
 
 import { login, type AuthFormState } from "./actions";
@@ -17,8 +18,8 @@ export default function LoginPage() {
   const [state, formAction] = useActionState<AuthFormState, FormData>(login, {});
 
   return (
-    <main className="flex flex-1 items-center justify-center px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+    <main className="flex flex-1 items-center justify-center px-4 py-8">
+      <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <Image
           src="/tbe-logo.png"
           alt="Temple Beth El"
@@ -44,7 +45,11 @@ export default function LoginPage() {
               id="email"
               name="email"
               type="email"
+              inputMode="email"
               autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               required
               className={inputClass}
             />
@@ -65,7 +70,10 @@ export default function LoginPage() {
 
           <FormError message={state.error} />
 
-          <SubmitButton pendingText="Signing in…" className="w-full rounded-lg bg-slate-900 px-4 py-2 font-medium text-white shadow-sm transition hover:bg-slate-700 disabled:opacity-50">
+          <SubmitButton
+            pendingText="Signing in…"
+            className={`w-full ${primaryButtonClass}`}
+          >
             Sign in
           </SubmitButton>
         </form>

@@ -22,7 +22,7 @@ export default async function HomePage({
 
   if (marketplaceIsEmpty) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
+      <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center sm:p-12">
         <h2 className="text-lg font-medium text-slate-900">No items yet</h2>
         <p className="mt-1 text-sm text-slate-500">
           Be the first to list something for the community.
@@ -44,7 +44,7 @@ export default async function HomePage({
       </div>
 
       {listings.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center sm:p-12">
           <p className="text-sm text-slate-500">
             {filter === "available"
               ? "Nothing is available right now — every item has been sold."
@@ -58,7 +58,9 @@ export default async function HomePage({
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        // Stays 2-up on a phone — browse density matters more than card size
+        // here — so the gutter tightens instead to buy back card width.
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
           {listings.map((listing) => (
             <ListingCard key={listing.id} listing={listing} />
           ))}

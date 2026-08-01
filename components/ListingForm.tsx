@@ -4,7 +4,12 @@ import { startTransition, useActionState, useState } from "react";
 
 import { MAX_IMAGES_PER_LISTING } from "@/lib/config";
 import { compressImage } from "@/lib/image";
-import { FormError, inputClass, labelClass } from "@/components/ui";
+import {
+  FormError,
+  inputClass,
+  labelClass,
+  primaryButtonClass,
+} from "@/components/ui";
 import type { ListingFormState } from "@/app/(app)/listings/actions";
 
 type Action = (
@@ -114,7 +119,9 @@ export function ListingForm({
           defaultValue={defaults?.price}
           className={`${inputClass} disabled:bg-slate-100 disabled:text-slate-400`}
         />
-        <label className="mt-2 flex items-center gap-2 text-sm text-slate-600">
+        {/* The box stays 16px; the label wrapper is what makes the target 44px
+            tall, so the whole row is tappable on a phone. */}
+        <label className="mt-1 flex min-h-11 touch-manipulation items-center gap-2 text-sm text-slate-600">
           <input
             type="checkbox"
             name="free"
@@ -155,7 +162,7 @@ export function ListingForm({
           multiple
           required={photosRequired}
           onChange={onPickImages}
-          className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-white hover:file:bg-slate-700"
+          className="block w-full text-sm text-slate-600 file:mr-3 file:min-h-11 file:touch-manipulation file:rounded-lg file:border-0 file:bg-slate-900 file:px-4 file:text-white hover:file:bg-slate-700"
         />
         {previews.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
@@ -188,10 +195,12 @@ export function ListingForm({
 
       <FormError message={localError ?? state.error} />
 
+      {/* Full-width on a phone (it's the only action on the screen), natural
+          width once there's room beside it. */}
       <button
         type="submit"
         disabled={busy}
-        className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 font-medium text-white shadow-sm transition hover:bg-slate-700 disabled:opacity-50"
+        className={`w-full sm:w-auto ${primaryButtonClass}`}
       >
         {processing ? "Processing photos…" : isPending ? "Saving…" : submitLabel}
       </button>

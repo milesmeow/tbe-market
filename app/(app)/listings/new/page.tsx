@@ -12,7 +12,7 @@ export default function NewListingPage() {
       <h1 className="mt-2 mb-4 text-xl font-semibold text-slate-900">
         Post an item
       </h1>
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <ListingForm
           action={createListing}
           submitLabel="Post item"

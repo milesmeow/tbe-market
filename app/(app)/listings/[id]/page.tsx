@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Gallery } from "@/components/Gallery";
 import { MessageSellerForm } from "@/components/MessageSellerForm";
 import { ThreadRow } from "@/components/ThreadRow";
+import { smallButtonClass } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
 import { getListing, imagePublicUrl, sortedImages } from "@/lib/listings";
 import { getThreadsForListing } from "@/lib/messages";
@@ -49,11 +50,11 @@ export default async function ListingDetailPage({
 
         <div>
           <div className="flex items-start justify-between gap-3">
-            <h1 className="text-2xl font-semibold text-slate-900">
+            <h1 className="min-w-0 break-words text-xl font-semibold text-slate-900 sm:text-2xl">
               {listing.title}
             </h1>
             {isSold && (
-              <span className="rounded-md bg-slate-900 px-2 py-1 text-xs font-semibold uppercase tracking-wide text-white">
+              <span className="shrink-0 rounded-md bg-slate-900 px-2 py-1 text-xs font-semibold uppercase tracking-wide text-white">
                 Sold
               </span>
             )}
@@ -76,10 +77,12 @@ export default async function ListingDetailPage({
               {seller?.display_name ?? "A member"}
             </p>
             <div className="mt-2 space-y-1 text-sm">
+              {/* break-all: a long address is one unbreakable token and would
+                  otherwise push this card past a 375px viewport. */}
               {seller?.contact_email && (
                 <a
                   href={`mailto:${seller.contact_email}`}
-                  className="block text-slate-700 underline hover:text-slate-900"
+                  className="block break-all text-slate-700 underline hover:text-slate-900"
                 >
                   {seller.contact_email}
                 </a>
@@ -87,7 +90,7 @@ export default async function ListingDetailPage({
               {seller?.contact_phone && (
                 <a
                   href={`tel:${seller.contact_phone}`}
-                  className="block text-slate-700 underline hover:text-slate-900"
+                  className="block break-all text-slate-700 underline hover:text-slate-900"
                 >
                   {seller.contact_phone}
                 </a>
@@ -143,7 +146,7 @@ export default async function ListingDetailPage({
           {isOwner && (
             <Link
               href={`/listings/${listing.id}/edit`}
-              className="mt-4 inline-block rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className={`mt-4 w-full sm:w-auto ${smallButtonClass}`}
             >
               Edit listing
             </Link>

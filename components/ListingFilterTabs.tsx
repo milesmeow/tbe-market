@@ -29,11 +29,11 @@ export function ListingFilterTabs({ active }: { active: ListingFilter }) {
             key={tab.value}
             href={tab.href}
             aria-current={isActive ? "page" : undefined}
-            className={
+            className={`inline-flex min-h-11 touch-manipulation items-center justify-center rounded-md px-3 text-sm font-medium ${
               isActive
-                ? "rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white"
-                : "rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
-            }
+                ? "bg-slate-900 text-white"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
           >
             {tab.label}
           </Link>

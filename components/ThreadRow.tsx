@@ -32,15 +32,13 @@ export function ThreadRow({
   return (
     <Link
       href={`/messages/${thread.id}`}
-      className="block rounded-xl border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:bg-slate-50"
+      className="block touch-manipulation rounded-xl border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:bg-slate-50 active:bg-slate-50"
     >
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
         <span
-          className={
-            isNew
-              ? "text-sm font-semibold text-slate-900"
-              : "text-sm font-medium text-slate-900"
-          }
+          className={`min-w-0 break-words text-sm text-slate-900 ${
+            isNew ? "font-semibold" : "font-medium"
+          }`}
         >
           {other?.display_name ?? "A member"}
         </span>

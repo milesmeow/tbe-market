@@ -53,13 +53,15 @@ export function ReplyForm({ threadId }: { threadId: string }) {
 
       <FormError message={state.error} />
 
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-slate-400">
+      {/* flex-wrap, and the button ahead of the note in the source: on a phone
+          the note takes the full width and Send sits below it at full width. */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="order-2 text-xs text-slate-400 sm:order-1">
           They&apos;ll see this next time they visit.
         </p>
         <SubmitButton
           pendingText="Sending…"
-          className={`${primaryButtonClass} text-sm`}
+          className={`order-1 w-full text-sm sm:order-2 sm:w-auto ${primaryButtonClass}`}
         >
           Send
         </SubmitButton>

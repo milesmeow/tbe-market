@@ -7,6 +7,7 @@ import {
   SubmitButton,
   inputClass,
   labelClass,
+  primaryButtonClass,
 } from "@/components/ui";
 
 import { updateProfile, type ProfileFormState } from "./actions";
@@ -37,6 +38,8 @@ export function ProfileForm({
           type="text"
           required
           maxLength={80}
+          autoComplete="name"
+          autoCapitalize="words"
           defaultValue={defaults.display_name}
           className={inputClass}
         />
@@ -49,6 +52,11 @@ export function ProfileForm({
           id="contact_email"
           name="contact_email"
           type="email"
+          inputMode="email"
+          autoComplete="email"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
           defaultValue={defaults.contact_email}
           className={inputClass}
         />
@@ -61,6 +69,8 @@ export function ProfileForm({
           id="contact_phone"
           name="contact_phone"
           type="tel"
+          inputMode="tel"
+          autoComplete="tel"
           defaultValue={defaults.contact_phone}
           className={inputClass}
         />
@@ -78,7 +88,12 @@ export function ProfileForm({
         </p>
       )}
 
-      <SubmitButton pendingText="Saving…">Save profile</SubmitButton>
+      <SubmitButton
+        pendingText="Saving…"
+        className={`w-full sm:w-auto ${primaryButtonClass}`}
+      >
+        Save profile
+      </SubmitButton>
     </form>
   );
 }

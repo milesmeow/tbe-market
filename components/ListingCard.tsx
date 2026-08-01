@@ -9,10 +9,12 @@ export function ListingCard({ listing }: { listing: ListingWithDetails }) {
   const cover = sortedImages(listing)[0];
   const isSold = listing.status === "sold";
 
+  // `active:` is the only press feedback a touch device gets — `hover:` never
+  // fires there, so the card would otherwise feel inert until it navigates.
   return (
     <Link
       href={`/listings/${listing.id}`}
-      className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+      className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md active:scale-[0.99]"
     >
       <div className="relative aspect-square bg-slate-100">
         {cover ? (
